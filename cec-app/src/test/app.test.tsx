@@ -442,7 +442,75 @@ describe('Cursos — carga en dos viajes', () => {
   })
 })
 
+describe('Cursos — publicar para el equipo', () => {
+  /**
+   * La respuesta tiene que salir dentro del panel. Antes iba al aviso global,
+   * al principio de la página: quien está abajo configurando el token no lo veía
+   * y parecía que «Probar conexión» no hacía nada.
+   */
+  async function abrirPanel() {
+    await montar()
+    await irA('Cursos')
+    await userEvent.click(await screen.findByRole('button', { name: 'Configurar' }))
+    return screen.getByText('Publicar para el equipo').closest('.card') as HTMLElement
+  }
+
+  it('muestra el resultado de «Probar conexión» dentro del panel', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: RequestInfo | URL) => {
+      if (String(url).includes('seed.json')) return new Response(semilla, { status: 200 })
+      return new Response(
+        JSON.stringify({ full_name: 'usuario/repo', permissions: { push: true } }),
+        { status: 200 },
+      )
+    }))
+
+    const panel = await abrirPanel()
+    await userEvent.type(within(panel).getByLabelText('Repositorio'), 'usuario/repo')
+    await userEvent.type(within(panel).getByLabelText('Token de acceso'), 'github_pat_x')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Probar conexión' }))
+
+    const ok = await within(panel).findByText(/permiso de escritura/i)
+    expect(ok).toBeInTheDocument()
+    expect(ok.closest('.card')).toBe(panel)
+  })
+
+  it('explica el fallo cuando el token no sirve, también dentro del panel', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: RequestInfo | URL) => {
+      if (String(url).includes('seed.json')) return new Response(semilla, { status: 200 })
+      return new Response(JSON.stringify({ message: 'Bad credentials' }), { status: 401 })
+    }))
+
+    const panel = await abrirPanel()
+    await userEvent.type(within(panel).getByLabelText('Repositorio'), 'usuario/repo')
+    await userEvent.type(within(panel).getByLabelText('Token de acceso'), 'malo')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Probar conexión' }))
+
+    const err = await within(panel).findByText(/no es válido o expiró/i)
+    expect(err.closest('.card')).toBe(panel)
+  })
+
+  it('avisa si el token no tiene permiso de escritura', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: RequestInfo | URL) => {
+      if (String(url).includes('seed.json')) return new Response(semilla, { status: 200 })
+      return new Response(
+        JSON.stringify({ full_name: 'usuario/repo', permissions: { push: false } }),
+        { status: 200 },
+      )
+    }))
+
+    const panel = await abrirPanel()
+    await userEvent.type(within(panel).getByLabelText('Repositorio'), 'usuario/repo')
+    await userEvent.type(within(panel).getByLabelText('Token de acceso'), 'solo-lectura')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Probar conexión' }))
+
+    // «Contents: read and write» también sale en el texto de ayuda del panel,
+    // así que se busca por la frase del mensaje de error.
+    expect(await within(panel).findByText(/no tiene permiso de escritura en/i)).toBeInTheDocument()
+  })
+})
+
 describe('Guía de datos', () => {
+
 
 
   it('documenta las cinco páginas, los conceptos y las tablas', async () => {

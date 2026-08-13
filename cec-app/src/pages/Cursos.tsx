@@ -17,7 +17,7 @@ import { leerArchivoComoBuffer, leerArchivoComoTexto } from '../lib/archivos'
 import { numero, fechaLarga } from '../lib/format'
 import {
   CONFIG_POR_DEFECTO, commitJSON, guardarToken, leerToken, olvidarToken,
-  verificarAcceso, type ConfigGitHub,
+  verificarAcceso, type ConfigGitHub, type ResultadoCommit,
 } from '../lib/github'
 
 export function Cursos() {
@@ -619,22 +619,33 @@ function PanelGitHub({
     }
   }
 
+  /**
+   * La respuesta se guarda aquí y se pinta dentro del panel. Antes iba al aviso
+   * global, que vive al principio de la página: quien está abajo configurando el
+   * token no lo veía y parecía que el botón no hacía nada.
+   */
+  const [respuesta, setRespuesta] = useState<ResultadoCommit | null>(null)
+
   const probar = async () => {
     setTrabajando(true)
+    setRespuesta(null)
     const r = await verificarAcceso(cfg, token)
     setTrabajando(false)
-    onAviso({ tono: r.ok ? 'ok' : 'err', texto: r.mensaje })
+    setRespuesta(r)
   }
 
   const publicar = async () => {
     if (!confirm(`Se hará un commit de la base (${base.cursos.length} cursos) en ${cfg.repo} · ${cfg.rama}. ¿Continuar?`)) return
     setTrabajando(true)
+    setRespuesta(null)
     guardarToken(token, recordar)
     const r = await commitJSON(
       cfg, token, JSON.stringify(base),
       `datos: actualiza la base consolidada del CEC (${base.cursos.length} cursos)`,
     )
     setTrabajando(false)
+    setRespuesta(r)
+    // El resultado de publicar sí interesa aunque el usuario suba la página.
     onAviso({ tono: r.ok ? 'ok' : 'err', texto: r.mensaje })
   }
 
@@ -734,12 +745,49 @@ function PanelGitHub({
             {leerToken() && (
               <button
                 className="btn btn-outline"
-                onClick={() => { olvidarToken(); setToken(''); onAviso({ tono: 'ok', texto: 'Token olvidado.' }) }}
+                onClick={() => {
+                  olvidarToken()
+                  setToken('')
+                  setRespuesta({ ok: true, mensaje: 'Token olvidado en este navegador.' })
+                }}
               >
                 Olvidar token
               </button>
             )}
           </div>
+
+          {trabajando && (
+            <p className="text-[13px] text-muted" role="status">Contactando a GitHub…</p>
+          )}
+
+          {respuesta && !trabajando && (
+            <div
+              role="status"
+              className="rounded-2xl px-4 py-3 text-[13px] border"
+              style={{
+                borderColor: respuesta.ok ? 'rgba(47,163,107,.45)' : 'rgba(255,61,139,.45)',
+                background: respuesta.ok ? 'var(--green-soft)' : 'var(--pill-pend-bg)',
+                color: respuesta.ok ? 'var(--green-ink)' : 'var(--pill-pend-fg)',
+              }}
+            >
+              <span className="mr-1.5" aria-hidden>{respuesta.ok ? '✓' : '!'}</span>
+              {respuesta.mensaje}
+              {respuesta.url && (
+                <>
+                  {' '}
+                  <a
+                    href={respuesta.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline"
+                    style={{ color: 'inherit' }}
+                  >
+                    Ver el commit
+                  </a>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
     </Card>
