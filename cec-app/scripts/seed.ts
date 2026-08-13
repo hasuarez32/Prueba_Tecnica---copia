@@ -20,6 +20,7 @@ import { importarArchivos, type ArchivoEntrada } from '../src/lib/etl/index'
 import { derivar } from '../src/lib/etl/derive'
 import type { BaseConsolidada, CursoImportado } from '../src/lib/etl/types'
 import { anonimizar } from './anonimizar'
+import { descubrirProgramas, excelDe } from './descubrir'
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url))
 const APP = path.resolve(AQUI, '..')
@@ -28,24 +29,14 @@ const SALIDA = path.join(APP, 'public', 'data', 'seed.json')
 const CORTE_REF = '2026-08-11'
 const ANONIMO = process.argv.includes('--anonimizar')
 
-function carpetas(): Array<{ nombre: string; dir: string }> {
-  const out: Array<{ nombre: string; dir: string }> = []
-  for (const nombre of fs.readdirSync(RAIZ).sort()) {
-    const dir = path.join(RAIZ, nombre, 'Equipo Logístico', 'Listado de Clases')
-    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) out.push({ nombre, dir })
-  }
-  return out
-}
-
 function archivosDe(dir: string): ArchivoEntrada[] {
-  return fs
-    .readdirSync(dir)
-    .filter((f) => /\.xlsx$/i.test(f) && !f.startsWith('~$'))
-    .sort()
-    .map((f) => ({ nombre: f, datos: new Uint8Array(fs.readFileSync(path.join(dir, f))) }))
+  return excelDe(dir).map((f) => ({
+    nombre: f,
+    datos: new Uint8Array(fs.readFileSync(path.join(dir, f))),
+  }))
 }
 
-const encontradas = carpetas()
+const encontradas = descubrirProgramas(RAIZ)
 if (encontradas.length === 0) {
   console.error(`No encontré carpetas de programa en ${RAIZ}`)
   process.exit(1)
@@ -57,7 +48,7 @@ console.log(`Programas detectados: ${encontradas.length}\n`)
 const cursos: CursoImportado[] = []
 let errores = 0
 
-for (const { nombre, dir } of encontradas) {
+for (const { nombre, dir, relativa } of encontradas) {
   const r = importarArchivos(archivosDe(dir), nombre)
   const nErr = r.incidencias.filter((i) => i.severidad === 'error').length
   const nAvi = r.incidencias.filter((i) => i.severidad === 'aviso').length
@@ -70,7 +61,7 @@ for (const { nombre, dir } of encontradas) {
     )
   } else {
     errores++
-    console.log(`  [FALLA] ${nombre}`)
+    console.log(`  [FALLA] ${nombre}  (${relativa})`)
     for (const i of r.incidencias.filter((x) => x.severidad === 'error')) {
       console.log(`          · ${i.mensaje}${i.donde ? ` (${i.donde})` : ''}`)
     }

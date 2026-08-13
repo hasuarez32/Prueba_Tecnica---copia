@@ -1,16 +1,24 @@
 /**
  * Página 2 — Seguimiento semanal (mockup `2_semanal.html`).
  *
- * Matriz de carga con mapa de calor + tabla de clases. Dos modos:
- *  - una semana concreta → las columnas son los días de esa semana;
- *  - todas las semanas   → las columnas pasan a ser semanas, que es la única
- *    forma de que el mapa de calor siga siendo legible en un rango de meses.
+ * Cubre §5 y §6 del enunciado:
+ *
+ *  - Distingue **programa en ejecución** (su cronograma abarca la semana) de
+ *    **programa con clase esa semana** (tiene al menos una sesión). Un programa
+ *    puede estar activo y aun así descansar la semana elegida, y esa diferencia
+ *    tiene que verse.
+ *  - Permite contar, por día, cuántas sesiones hay que atender y cuántos
+ *    programas tienen actividad.
+ *
+ * La matriz tiene dos modos: una semana concreta muestra días; «todas las
+ * semanas» cambia las columnas a semanas, única forma de que el mapa de calor
+ * siga siendo legible en un rango de meses.
  */
 
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../store/AppStore'
-import { Card, PageHead, Campo, PillEstado, EstadoVacio } from '../components/ui'
+import { Card, PageHead, Campo, PillEstado, EstadoVacio, Kpi } from '../components/ui'
 import { SelectorBuscable, type OpcionSelector } from '../components/SelectorBuscable'
 import { lunesDe, sumarDias, diaSemanaISO } from '../lib/etl/derive'
 import { DIAS_CORTO, DIAS_NOMBRE } from '../lib/etl/normalize'
@@ -19,6 +27,8 @@ import { exportarCSV } from '../lib/exporters'
 
 const TODAS = 'todas'
 const TODOS = 'todos'
+
+type Metrica = 'sesiones' | 'horas'
 
 export function Semanal() {
   const { derivada, fechaCorte } = useApp()
@@ -40,6 +50,7 @@ export function Semanal() {
     return claves.find((s) => s >= objetivo) ?? claves[claves.length - 1] ?? TODAS
   })
   const [programa, setPrograma] = useState(TODOS)
+  const [metrica, setMetrica] = useState<Metrica>('sesiones')
 
   const todas = semana === TODAS
   const claves = semanas.map(([l]) => l)
@@ -51,7 +62,6 @@ export function Semanal() {
       valor: lunes,
       etiqueta: rangoSemana(lunes, sumarDias(lunes, 6)),
       sub: `${n} clase${n === 1 ? '' : 's'}`,
-      // Buscar por «ago», «08», «2026-08-10» o el número de semana.
       alias: `${lunes} ${sumarDias(lunes, 6)}`,
     })),
   ], [semanas, derivada.sesiones.length])
@@ -77,6 +87,33 @@ export function Semanal() {
     return s.fecha >= dias[0] && s.fecha <= dias[6]
   }), [derivada.sesiones, programa, todas, dias])
 
+  /**
+   * §5 — Los dos conceptos que el enunciado pide diferenciar.
+   *
+   * «En ejecución» se evalúa contra el período analizado: si se mira una semana
+   * concreta, el cronograma del programa tiene que solaparla. Con «todas las
+   * semanas» el período es todo el rango, así que se usa el estado del programa
+   * frente a la fecha de corte, que es lo que muestra el resumen global.
+   */
+  const programas = useMemo(() => {
+    const alcance = derivada.programas.filter(
+      (p) => programa === TODOS || p.programa_id === programa,
+    )
+    const enEjecucion = todas
+      ? alcance.filter((p) => p.estado_programa === 'En ejecución')
+      : alcance.filter((p) =>
+        p.fecha_inicio && p.fecha_fin &&
+        p.fecha_inicio <= dias[6] && p.fecha_fin >= dias[0])
+
+    const conClase = new Set(enRango.map((s) => s.programa_id))
+    return {
+      enEjecucion,
+      conClase: alcance.filter((p) => conClase.has(p.programa_id)),
+      // Activos pero sin clase esta semana: el caso que el enunciado subraya.
+      enPausa: enEjecucion.filter((p) => !conClase.has(p.programa_id)),
+    }
+  }, [derivada.programas, programa, todas, dias, enRango])
+
   /** Columnas del mapa de calor: días de la semana, o semanas si están todas. */
   const columnas = useMemo(() => {
     if (todas) {
@@ -94,7 +131,7 @@ export function Semanal() {
 
   const claveDe = (fecha: string) => (todas ? lunesDe(fecha) : fecha)
 
-  /** Matriz programa × columna con las horas de clase acumuladas. */
+  /** Matriz programa × columna: sesiones y horas acumuladas en cada cruce. */
   const matriz = useMemo(() => {
     const porPrograma = new Map<string, {
       nombre: string
@@ -111,15 +148,21 @@ export function Semanal() {
     }
     const filas = [...porPrograma.entries()].map(([id, v]) => ({ id, ...v }))
     filas.sort((a, b) => a.nombre.localeCompare(b.nombre))
-    const max = Math.max(1, ...filas.flatMap((f) => [...f.celdas.values()].map((c) => c.horas)))
+    const max = Math.max(1, ...filas.flatMap((f) =>
+      [...f.celdas.values()].map((c) => (metrica === 'horas' ? c.horas : c.n))))
     return { filas, max }
-  }, [enRango, todas])
+  }, [enRango, todas, metrica])
 
-  const totalesColumna = useMemo(() => {
-    const m = new Map<string, number>()
+  /** §6 — Por día: cuántas sesiones hay que atender y cuántos programas mueven. */
+  const totales = useMemo(() => {
+    const m = new Map<string, { sesiones: number; horas: number; programas: Set<string> }>()
     for (const s of enRango) {
       const k = claveDe(s.fecha)
-      m.set(k, (m.get(k) ?? 0) + (s.intensidad_horaria ?? 0))
+      const t = m.get(k) ?? { sesiones: 0, horas: 0, programas: new Set<string>() }
+      t.sesiones += 1
+      t.horas += s.intensidad_horaria ?? 0
+      t.programas.add(s.programa_id)
+      m.set(k, t)
     }
     return m
   }, [enRango, todas])
@@ -130,12 +173,7 @@ export function Semanal() {
     [enRango],
   )
 
-  const resumen = useMemo(() => ({
-    tab: enRango.filter((s) => s.estado_seguimiento === 'Tabulada').length,
-    pen: enRango.filter((s) => s.estado_seguimiento === 'Pendiente de tabular').length,
-    fut: enRango.filter((s) => s.estado_seguimiento === 'Futura no exigible').length,
-    horas: enRango.reduce((a, s) => a + (s.intensidad_horaria ?? 0), 0),
-  }), [enRango])
+  const horasTotales = enRango.reduce((a, s) => a + (s.intensidad_horaria ?? 0), 0)
 
   if (derivada.programas.length === 0) {
     return (
@@ -185,26 +223,67 @@ export function Semanal() {
         </Campo>
       </PageHead>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4 text-[13px] text-muted">
-        <span>
-          <b className="text-heading font-semibold">{numero(enRango.length)}</b> clases en {etiquetaAmbito}
-        </span>
-        <span aria-hidden>·</span>
-        <span><b className="text-heading font-semibold">{numero(resumen.horas)}</b> horas</span>
-        <span aria-hidden>·</span>
-        <span style={{ color: 'var(--cyan-ink)' }}>{resumen.tab} tabuladas</span>
-        <span style={{ color: 'var(--pink)' }}>{resumen.pen} pendientes</span>
-        <span>{resumen.fut} futuras</span>
+      {/* §5 — los dos conceptos, uno al lado del otro */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
+        <Kpi
+          etiqueta="En ejecución"
+          valor={numero(programas.enEjecucion.length)}
+          sub={todas ? 'al corte activo' : 'activos esta semana'}
+        />
+        <Kpi
+          etiqueta="Con clase"
+          valor={numero(programas.conClase.length)}
+          sub={`de ${programas.enEjecucion.length} en ejecución`}
+          tono="cyan"
+        />
+        <Kpi etiqueta="Sesiones" valor={numero(enRango.length)} sub="por atender" />
+        <Kpi etiqueta="Horas" valor={numero(horasTotales)} sub="de clase" />
       </div>
+
+      {programas.enPausa.length > 0 && (
+        <p className="text-[13px] text-body mb-5 rounded-soft px-4 py-2.5 border border-line"
+          style={{ background: 'var(--card)' }}>
+          <b className="text-heading font-semibold">
+            {programas.enPausa.length} programa{programas.enPausa.length === 1 ? '' : 's'}
+          </b>{' '}
+          en ejecución sin clase en {etiquetaAmbito}:{' '}
+          <span className="text-muted">
+            {programas.enPausa.map((p) => p.programa).join(' · ')}
+          </span>
+        </p>
+      )}
 
       <Card
         titulo={todas ? 'Carga por semana' : 'Carga por día'}
         hint={
-          todas
-            ? 'Horas de clase por semana. Más intenso, más carga.'
-            : 'Horas de clase programadas. Más intenso, más carga ese día.'
+          metrica === 'sesiones'
+            ? `Sesiones que hay que atender cada ${todas ? 'semana' : 'día'}.`
+            : `Horas de clase programadas cada ${todas ? 'semana' : 'día'}.`
         }
         className="mb-5"
+        acciones={
+          <div
+            className="flex gap-1 p-[3px] rounded-pill border border-line shrink-0"
+            style={{ background: 'var(--card-2)' }}
+            role="group"
+            aria-label="Métrica de la matriz"
+          >
+            {([['sesiones', 'Sesiones'], ['horas', 'Horas']] as const).map(([v, t]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setMetrica(v)}
+                aria-pressed={metrica === v}
+                className="px-3 py-1 rounded-pill text-[12.5px] font-medium border-0 cursor-pointer"
+                style={metrica === v
+                  ? { background: 'var(--accent-solid)', color: 'var(--accent-on)' }
+                  : { background: 'transparent', color: 'var(--heading)' }}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        }
       >
         {columnas.length === 0 ? (
           <p className="card-hint">
@@ -216,7 +295,8 @@ export function Semanal() {
           <div className="scroll-x">
             <table>
               <caption className="sr-only">
-                Horas de clase por programa y {todas ? 'semana' : 'día'}, {etiquetaAmbito}
+                {metrica === 'sesiones' ? 'Sesiones' : 'Horas de clase'} por programa y
+                {todas ? ' semana' : ' día'}, {etiquetaAmbito}
               </caption>
               <thead>
                 <tr>
@@ -257,7 +337,8 @@ export function Semanal() {
                     </td>
                     {columnas.map((c) => {
                       const celda = f.celdas.get(c.clave)
-                      const intensidad = celda ? Math.max(0.16, celda.horas / matriz.max) : 0
+                      const valor = celda ? (metrica === 'horas' ? celda.horas : celda.n) : 0
+                      const intensidad = celda ? Math.max(0.16, valor / matriz.max) : 0
                       return (
                         <td key={c.clave} className="p-0 text-center border-b-0">
                           <div
@@ -269,10 +350,10 @@ export function Semanal() {
                               color: celda && intensidad > 0.55 ? 'var(--pill-tab-fg)' : 'var(--heading)',
                             }}
                             title={celda
-                              ? `${f.nombre} · ${celda.n} clase(s), ${celda.horas} h`
+                              ? `${f.nombre} · ${celda.n} sesión(es), ${celda.horas} h`
                               : undefined}
                           >
-                            {celda ? celda.horas : ''}
+                            {celda ? valor : ''}
                           </div>
                         </td>
                       )
@@ -280,20 +361,50 @@ export function Semanal() {
                   </tr>
                 ))}
               </tbody>
+              {/* §6 — el conteo que pide el enunciado, por día */}
               <tfoot>
                 <tr>
-                  <td
-                    className="font-display font-bold text-heading pt-2 border-t border-line pl-0 sticky left-0"
+                  <th
+                    scope="row"
+                    className="font-display font-bold text-heading text-left pt-2 border-t border-line pl-0 sticky left-0"
                     style={{ background: 'var(--card)' }}
                   >
-                    Total
-                  </td>
+                    Sesiones
+                  </th>
                   {columnas.map((c) => (
                     <td
                       key={c.clave}
                       className="font-display font-bold text-heading text-center pt-2 border-t border-line"
                     >
-                      {totalesColumna.get(c.clave) ?? 0}
+                      {totales.get(c.clave)?.sesiones ?? 0}
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <th
+                    scope="row"
+                    className="text-[12.5px] text-muted text-left pb-1 pl-0 sticky left-0 font-medium"
+                    style={{ background: 'var(--card)' }}
+                  >
+                    Programas
+                  </th>
+                  {columnas.map((c) => (
+                    <td key={c.clave} className="text-[12.5px] text-muted text-center pb-1">
+                      {totales.get(c.clave)?.programas.size ?? 0}
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <th
+                    scope="row"
+                    className="text-[12.5px] text-muted text-left pl-0 sticky left-0 font-medium"
+                    style={{ background: 'var(--card)' }}
+                  >
+                    Horas
+                  </th>
+                  {columnas.map((c) => (
+                    <td key={c.clave} className="text-[12.5px] text-muted text-center">
+                      {totales.get(c.clave)?.horas ?? 0}
                     </td>
                   ))}
                 </tr>

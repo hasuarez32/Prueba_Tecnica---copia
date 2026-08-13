@@ -304,27 +304,42 @@ INC = Incidencias()
 # Descubrimiento de carpetas
 # --------------------------------------------------------------------------
 
-def descubrir_programas(raiz: str):
-    """Subcarpetas con 'Equipo Logístico/Listado de Clases'. Orden determinista."""
+def descubrir_programas(raiz: str, profundidad_max: int = 5):
+    """
+    Carpetas de programa, buscando en profundidad la subcarpeta
+    'Listado de Clases'. El programa es la carpeta que contiene a
+    'Equipo Logístico'.
+
+    El enunciado describe la estructura real organizada por mes y, dentro de
+    cada mes, por programa (JULIO 2026/<programa>/Equipo Logístico/...), mientras
+    que la copia de trabajo viene aplanada. Buscar en profundidad cubre las dos
+    sin asumir un número fijo de niveles. Orden determinista.
+    """
     encontrados = []
-    for nombre in sorted(os.listdir(raiz)):
-        ruta = os.path.join(raiz, nombre)
-        if not os.path.isdir(ruta) or nombre.startswith("."):
-            continue
-        if norm(nombre) in CARPETAS_IGNORADAS:
-            continue
-        for sub in (SUBRUTA_CLASES, SUBRUTA_CLASES_ALT):
-            candidata = os.path.join(ruta, *sub)
-            if os.path.isdir(candidata):
-                encontrados.append((nombre, candidata))
-                break
-        else:
-            # búsqueda tolerante: cualquier ruta que contenga 'listado de clases'
-            for base, dirs, _ in os.walk(ruta):
-                dirs[:] = [d for d in dirs if norm(d) not in CARPETAS_IGNORADAS]
-                if norm(os.path.basename(base)) == "listado de clases":
-                    encontrados.append((nombre, base))
-                    break
+
+    def recorrer(directorio, profundidad):
+        if profundidad > profundidad_max:
+            return
+        try:
+            entradas = sorted(os.listdir(directorio))
+        except OSError:
+            return  # sin permisos o eliminada a mitad del recorrido
+        for nombre in entradas:
+            ruta = os.path.join(directorio, nombre)
+            if not os.path.isdir(ruta) or nombre.startswith("."):
+                continue
+            n = norm(nombre)
+            if n in CARPETAS_IGNORADAS or n in ("node_modules", "dist", "participantes"):
+                continue
+            if n == "listado de clases":
+                # <programa>/Equipo Logístico/Listado de Clases
+                programa = os.path.basename(os.path.dirname(os.path.dirname(ruta)))
+                encontrados.append((programa, ruta))
+                continue  # no hace falta bajar más por esta rama
+            recorrer(ruta, profundidad + 1)
+
+    recorrer(raiz, 0)
+    encontrados.sort(key=lambda x: (norm(x[0]), x[1]))
     return encontrados
 
 

@@ -86,9 +86,19 @@ export const PAGINAS_DOC: PaginaDoc[] = [
       'La vista de planeación. Muestra cómo se reparte la carga de clases entre días y programas, para anticipar choques de salón, docente o logística.',
     elementos: [
       {
+        titulo: 'En ejecución vs. con clase',
+        detalle:
+          'Son dos cosas distintas y por eso van una al lado de la otra. «En ejecución» es que el cronograma del programa abarca la semana elegida; «con clase» es que además tiene al menos una sesión esos días. Un diplomado de cinco meses está en ejecución todo el tiempo pero descansa muchas semanas: cuando eso pasa, un aviso nombra a los programas activos que no tienen clase.',
+      },
+      {
         titulo: 'Carga por día',
         detalle:
-          'Matriz programa × día. Cada celda son las HORAS de clase de ese programa ese día (no el número de clases). El color se escala contra la celda más cargada del rango visible: más intenso, más carga.',
+          'Matriz programa × día. La celda muestra las sesiones de ese programa ese día, o las horas si se cambia la métrica con el interruptor de la tarjeta. El color se escala contra la celda más cargada del rango visible: más intenso, más carga.',
+      },
+      {
+        titulo: 'Totales por día',
+        detalle:
+          'Bajo la matriz, tres filas responden lo que necesita el equipo para repartirse el trabajo: cuántas sesiones hay que atender ese día, cuántos programas distintos mueven y cuántas horas suman.',
       },
       {
         titulo: 'Carga por semana',

@@ -16,29 +16,23 @@ import {
   parseFecha, parseHora, parseNum, limpiarDocumento, normalizarModalidad, norm, mesANumero,
 } from './normalize'
 import type { BaseConsolidada, CursoImportado } from './types'
+import { descubrirProgramas, excelDe } from '../../../scripts/descubrir'
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url))
 const RAIZ = path.resolve(AQUI, '../../../..')
 const CORTE = '2026-08-11'
 
+/** Busca en profundidad, así funciona con la estructura plana y con la del
+ *  enunciado (`JULIO 2026/<programa>/Equipo Logístico/…`). */
 function carpetasDePrograma(): Array<{ nombre: string; dir: string }> {
-  const salida: Array<{ nombre: string; dir: string }> = []
-  for (const nombre of fs.readdirSync(RAIZ).sort()) {
-    const dir = path.join(RAIZ, nombre, 'Equipo Logístico', 'Listado de Clases')
-    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) salida.push({ nombre, dir })
-  }
-  return salida
+  return descubrirProgramas(RAIZ)
 }
 
 function leerCarpeta(dir: string): ArchivoEntrada[] {
-  return fs
-    .readdirSync(dir)
-    .filter((f) => /\.xlsx$/i.test(f) && !f.startsWith('~$'))
-    .sort()
-    .map((f) => {
-      const buf = fs.readFileSync(path.join(dir, f))
-      return { nombre: f, datos: new Uint8Array(buf) }
-    })
+  return excelDe(dir).map((f) => ({
+    nombre: f,
+    datos: new Uint8Array(fs.readFileSync(path.join(dir, f))),
+  }))
 }
 
 /**

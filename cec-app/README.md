@@ -18,7 +18,8 @@ Para cualquier fecha de corte, responde las preguntas del equipo logístico:
 | Pregunta | Dónde |
 |---|---|
 | ¿Qué programas están en ejecución y cómo van? | **Resumen** |
-| ¿Qué clases hay esta semana y qué días? | **Semanal** |
+| ¿Qué programas están activos esta semana y cuáles tienen clase? | **Semanal** |
+| ¿Cuántas sesiones hay que atender cada día? | **Semanal** |
 | ¿Qué sesiones ya se dictaron y siguen sin tabular? | **Control de tabulación** |
 | ¿Quién está por perder el derecho al certificado? | **Detalle académico** |
 | ¿Cómo agrego o actualizo un curso? | **Cursos** |
@@ -44,7 +45,7 @@ Otros comandos:
 ```bash
 npm run build        # compila a dist/ (typecheck + bundle)
 npm run preview      # sirve dist/ para revisar el build
-npm test             # 58 pruebas: ETL contra los Excel reales + interfaz
+npm test             # 66 pruebas: ETL contra los Excel reales + interfaz
 npm run seed         # regenera public/data/seed.json desde las 8 carpetas
 npm run typecheck    # sólo TypeScript
 ```
@@ -56,7 +57,16 @@ normalizadas. Sirve para que la app muestre algo útil desde el primer segundo.
 
 `npm run seed` lo regenera leyendo las carpetas de programa que están **un nivel
 arriba** de `cec-app/`, usando exactamente el mismo ETL que corre en el
-navegador. Si mueves las carpetas, ajusta `RAIZ` en `scripts/seed.ts`.
+navegador.
+
+La búsqueda es **en profundidad**: encuentra los programas tanto en la
+estructura plana (`<programa>/Equipo Logístico/Listado de Clases/`) como en la
+del CEC organizada por mes (`JULIO 2026/<programa>/Equipo Logístico/…`), sin
+asumir un número fijo de niveles. El programa es siempre la carpeta que contiene
+a `Equipo Logístico`, nunca el mes.
+
+Para publicar, usa `npm run seed -- --anonimizar`: conserva todos los
+indicadores y sustituye nombres y documentos por identidades sintéticas.
 
 Cuando cargas tus propios cursos, la base local (IndexedDB) tiene prioridad
 sobre la semilla. El botón **Restaurar ejemplo** en Cursos vuelve a la semilla.
@@ -269,9 +279,12 @@ cec-app/
 │  ├─ lib/github.ts       ← commit del JSON vía API
 │  ├─ lib/exporters.ts    ← JSON, Excel y CSV
 │  └─ test/
-│     ├─ app.test.tsx     ← 30 pruebas de interfaz
+│     ├─ app.test.tsx     ← 38 pruebas de interfaz
 │     └─ fixtures/        ← seed de ejemplo fijo, independiente del publicado
-├─ scripts/seed.ts        ← genera public/data/seed.json
+├─ scripts/
+│  ├─ seed.ts             ← genera public/data/seed.json
+│  ├─ descubrir.ts        ← busca las carpetas de programa en profundidad
+│  └─ anonimizar.ts       ← identidades sintéticas para publicar
 └─ public/data/seed.json  ← datos de ejemplo publicados
 ```
 
@@ -321,7 +334,7 @@ campo al modelo es añadir una línea ahí.
 
 ## Verificación
 
-`npm test` corre 58 pruebas. Las del ETL leen **los Excel reales** de las 8
+`npm test` corre 66 pruebas. Las del ETL leen **los Excel reales** de las 8
 carpetas y comparan contra `base_consolidada.xlsx`; las de interfaz montan la
 app y leen los números **de la pantalla**.
 

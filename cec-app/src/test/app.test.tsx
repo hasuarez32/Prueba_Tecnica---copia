@@ -228,7 +228,7 @@ describe('Semanal', () => {
 
     // El selector muestra el rango de la semana que contiene al corte.
     expect(screen.getByRole('button', { name: 'Elegir semana' })).toHaveTextContent('10 – 16 ago')
-    const tabla = screen.getByRole('table', { name: /Horas de clase por programa/i })
+    const tabla = screen.getByRole('table', { name: /por programa y/i })
     expect(within(tabla).getAllByRole('row').length).toBeGreaterThan(1)
   })
 
@@ -283,13 +283,92 @@ describe('Semanal', () => {
       const filas = within(tablas[tablas.length - 1]).getAllByRole('row').slice(1)
       expect(filas).toHaveLength(37)
     })
-    // El número va dentro de un <b>, así que el texto queda partido en dos nodos.
-    const resumen = screen.getByText(/clases en todo el periodo/)
-    expect(resumen.textContent).toContain('37 clases en todo el periodo')
+    expect(kpi('Sesiones')).toBe('37')
+  })
+})
+
+describe('Semanal — programa en ejecución vs. con clase (§5)', () => {
+  /**
+   * El enunciado pide diferenciar los dos conceptos: un programa puede estar
+   * activo según su cronograma y aun así no tener clase la semana elegida.
+   * En la semana del 10 al 16 de agosto eso le pasa a Odontología.
+   */
+  it('distingue los programas activos de los que tienen clase', async () => {
+    await montar()
+    await irA('Semanal')
+    await screen.findByText('Carga por día')
+
+    expect(kpi('En ejecución')).toBe('6')
+    expect(kpi('Con clase')).toBe('5')
+    expect(kpi('Sesiones')).toBe('11')
+  })
+
+  it('nombra los programas en ejecución que no tienen clase esa semana', async () => {
+    await montar()
+    await irA('Semanal')
+    await screen.findByText('Carga por día')
+
+    const aviso = screen.getByText(/en ejecución sin clase en/)
+    expect(aviso.textContent).toContain('1 programa')
+    expect(aviso.textContent).toContain('Odontología Estética')
+  })
+
+  it('al cambiar de semana cambian ambos conteos', async () => {
+    await montar()
+    await irA('Semanal')
+    await screen.findByText('Carga por día')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Elegir semana' }))
+    await userEvent.click(await screen.findByRole('option', { name: /^6 – 12 jul/ }))
+
+    // Primera semana del periodo: sólo habían arrancado Project (09/07) y
+    // Bootcamp (11/07); los demás cronogramas empiezan el 14/07 o después.
+    await waitFor(() => expect(kpi('Con clase')).toBe('2'))
+    expect(kpi('En ejecución')).toBe('2')
+    expect(kpi('Sesiones')).toBe('2')
+    // Ningún programa activo se queda sin clase, así que no hay aviso.
+    expect(screen.queryByText(/en ejecución sin clase en/)).toBeNull()
+  })
+})
+
+describe('Semanal — carga por día (§6)', () => {
+  /** «cuántas sesiones deben atenderse cada día» y cuántos programas mueven. */
+  it('cuenta sesiones, programas y horas por día', async () => {
+    await montar()
+    await irA('Semanal')
+    await screen.findByText('Carga por día')
+
+    const tabla = screen.getByRole('table', { name: /por programa y/i })
+    const pie = tabla.querySelector('tfoot')!
+    const fila = (encabezado: string) =>
+      within(pie).getByText(encabezado).closest('tr')!
+
+    const valores = (encabezado: string) =>
+      Array.from(fila(encabezado).querySelectorAll('td')).map((c) => c.textContent)
+
+    // Martes a sábado de la semana del 10 al 16 de agosto.
+    expect(valores('Sesiones')).toEqual(['2', '2', '2', '2', '3'])
+    expect(valores('Programas')).toEqual(['2', '2', '2', '2', '3'])
+    expect(valores('Horas')).toEqual(['6', '6', '5', '8', '15'])
+  })
+
+  it('la matriz muestra sesiones por defecto y permite ver horas', async () => {
+    await montar()
+    await irA('Semanal')
+    await screen.findByText('Carga por día')
+
+    const grupo = screen.getByRole('group', { name: 'Métrica de la matriz' })
+    expect(within(grupo).getByRole('button', { name: 'Sesiones' })).toHaveAttribute('aria-pressed', 'true')
+
+    await userEvent.click(within(grupo).getByRole('button', { name: 'Horas' }))
+    await waitFor(() =>
+      expect(within(grupo).getByRole('button', { name: 'Horas' })).toHaveAttribute('aria-pressed', 'true'))
+    expect(screen.getByRole('table', { name: /Horas de clase por programa/i })).toBeInTheDocument()
   })
 })
 
 describe('Guía de datos', () => {
+
   it('documenta las cinco páginas, los conceptos y las tablas', async () => {
     await montar()
     await irA('Guía')
