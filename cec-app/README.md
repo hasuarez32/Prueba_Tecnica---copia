@@ -46,7 +46,7 @@ Otros comandos:
 ```bash
 npm run build        # compila a dist/ (typecheck + bundle)
 npm run preview      # sirve dist/ para revisar el build
-npm test             # 80 pruebas: ETL contra los Excel reales + interfaz
+npm test             # 83 pruebas: ETL contra los Excel reales + interfaz
 npm run seed         # regenera public/data/seed.json desde las 8 carpetas
 npm run typecheck    # sólo TypeScript
 ```
@@ -126,6 +126,10 @@ de `base_consolidada.xlsx` (`fct_sesiones`, `dim_programas`, `dim_calendario`,
 **3. Compartida vía GitHub (opcional).** *Cursos → Publicar para el equipo*
 hace un commit del JSON consolidado al repositorio con la API de GitHub. El
 despliegue lo recoge y todo el equipo ve los mismos datos.
+
+Se publica **la base completa**, no sólo lo último añadido. Por eso, para borrar
+un curso para todo el equipo basta con quitarlo de *Cursos cargados* y volver a
+publicar: el archivo se reemplaza entero.
 
 > **Cuidado con los datos personales.** Si el repositorio es público, publicar
 > ahí la base con los cursos reales expone nombres y cédulas a todo internet, de
@@ -255,7 +259,8 @@ Los archivos se **acumulan**: se puede subir el cronograma, y el listado en otro
 momento. Una lista de requisitos muestra qué falta y qué ya está puesto, y cada
 archivo se puede quitar. Subir uno con el mismo nombre lo reemplaza.
 
-- **Errores** (bloquean la importación): falta la hoja `CONSOLIDADO`, no
+- **Errores** (bloquean la importación): los dos Excel son de cursos distintos,
+  falta la hoja `CONSOLIDADO`, no
   aparece la columna `Fecha` del cronograma, una fecha no se puede interpretar,
   el archivo no es un Excel o está dañado.
 - **Avisos** (se importa igual): typo de año en los metadatos, horas invertidas
@@ -349,7 +354,7 @@ campo al modelo es añadir una línea ahí.
 
 ## Verificación
 
-`npm test` corre 80 pruebas. Las del ETL leen **los Excel reales** de las 8
+`npm test` corre 83 pruebas. Las del ETL leen **los Excel reales** de las 8
 carpetas y comparan contra `base_consolidada.xlsx`; las de interfaz montan la
 app y leen los números **de la pantalla**.
 

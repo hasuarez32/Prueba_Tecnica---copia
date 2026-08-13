@@ -359,7 +359,13 @@ export function Cursos() {
                           <button
                             className="btn btn-outline px-2.5 py-1 text-[12px]"
                             onClick={() => {
-                              if (confirm(`¿Quitar «${p.programa}» de la base? Podrás volver a subir sus Excel cuando quieras.`)) {
+                              if (confirm(
+                                `¿Quitar «${p.programa}» de la base?
+
+` +
+                                'Se elimina de este navegador. Para que también desaparezca ' +
+                                'del sitio publicado, usa después «Publicar base».',
+                              )) {
                                 void eliminarCurso(p.programa_id)
                               }
                             }}
@@ -635,7 +641,17 @@ function PanelGitHub({
   }
 
   const publicar = async () => {
-    if (!confirm(`Se hará un commit de la base (${base.cursos.length} cursos) en ${cfg.repo} · ${cfg.rama}. ¿Continuar?`)) return
+    const nombres = base.cursos.map((c) => c.programa.programa).join(', ')
+    if (!confirm(
+      `Se hará un commit en ${cfg.repo} · ${cfg.rama}.
+
+` +
+      `El equipo pasará a ver exactamente estos ${base.cursos.length} curso(s):
+${nombres || '(ninguno)'}
+
+` +
+      'Reemplaza por completo lo que hubiera publicado. ¿Continuar?',
+    )) return
     setTrabajando(true)
     setRespuesta(null)
     guardarToken(token, recordar)
@@ -669,6 +685,12 @@ function PanelGitHub({
             Guardar es local por dispositivo. Para que el resto del equipo vea los mismos
             datos, publica el JSON en el repositorio: el despliegue de GitHub Pages lo
             recoge y el sitio queda actualizado para todos.
+          </p>
+          <p className="text-[12.5px] text-muted">
+            Se publica <b className="text-heading font-semibold">la base completa</b>, no
+            sólo lo último que agregaste: el equipo verá exactamente los cursos que
+            aparecen en «Cursos cargados». Por eso, para borrar un curso para todos basta
+            con quitarlo aquí y volver a publicar.
           </p>
 
           <div className="grid sm:grid-cols-2 gap-3">

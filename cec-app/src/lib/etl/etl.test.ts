@@ -279,7 +279,47 @@ conExcel('importación de las 8 carpetas de ejemplo', () => {
   })
 })
 
+conExcel('archivos de cursos distintos (§ validación)', () => {
+  /**
+   * Los dos Excel se arrastran a mano y es fácil mezclar el cronograma de un
+   * programa con el listado de otro. El resultado sería una base inventada:
+   * las sesiones de un curso con los participantes de otro.
+   */
+  function archivosDe(patron: RegExp) {
+    const c = carpetasDePrograma().find((x) => patron.test(x.nombre))!
+    return leerCarpeta(c.dir)
+  }
+
+  it('bloquea el cronograma de un curso con el listado de otro', () => {
+    const cronograma = archivosDe(/Heridas/).find((f) => /^cronograma/i.test(f.nombre))!
+    const listado = archivosDe(/Bienestar/).find((f) => !/^cronograma/i.test(f.nombre))!
+
+    const r = importarArchivos([cronograma, listado], 'Mezcla')
+    expect(r.ok).toBe(false)
+    const error = r.incidencias.find((i) =>
+      i.severidad === 'error' && /no parecen del mismo curso/.test(i.mensaje))
+    expect(error, 'no detectó que los archivos son de cursos distintos').toBeDefined()
+    expect(error!.sugerencia).toBeTruthy()
+  })
+
+  it('no estorba a los ocho cursos reales', () => {
+    for (const c of baseCompleta().cursos) {
+      const mezcla = c.incidencias.filter((i) => /no parecen del mismo curso/.test(i.mensaje))
+      expect(mezcla, `${c.programa.programa} marcado como mezcla`).toHaveLength(0)
+    }
+  })
+
+  it('se salta la comprobación si el CONSOLIDADO no tiene fechas', () => {
+    // Integración Sensorial trae la plantilla con «M./T» y ninguna columna
+    // fechada: no hay con qué comparar, así que no puede ser evidencia de nada.
+    const sensorial = baseCompleta().cursos.find((c) => c.programa.programa_id === 'SENSORIAL')!
+    expect(sensorial.sesiones.length).toBeGreaterThan(0)
+    expect(sensorial.incidencias.some((i) => i.severidad === 'error')).toBe(false)
+  })
+})
+
 conExcel('un programa vigente en varios meses (§2)', () => {
+
   /**
    * La estructura del CEC agrupa por mes y, dentro de cada mes, por los
    * programas vigentes: un diplomado de julio a septiembre aparece en las tres

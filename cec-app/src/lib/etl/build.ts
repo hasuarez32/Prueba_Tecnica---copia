@@ -364,6 +364,52 @@ export function construirCurso(entrada: EntradaCurso): {
       donde: entrada.listado?.archivo ?? entrada.nombre,
     })
   }
+  /**
+   * ¿Los dos archivos son del mismo curso?
+   *
+   * Nada obliga a que lo sean: se arrastran a mano y es fácil mezclar el
+   * cronograma de un programa con el listado de otro. La señal fiable son las
+   * fechas: en un curso real casi todas las columnas del CONSOLIDADO cruzan con
+   * una sesión (93–100 % en los ocho programas del CEC), mientras que entre dos
+   * cursos distintos coinciden por casualidad, si acaso.
+   *
+   * La comprobación se salta cuando el CONSOLIDADO no tiene ninguna columna
+   * fechada —como Integración Sensorial, cuya plantilla quedó sin fechas—:
+   * ahí no hay con qué comparar y no sería evidencia de nada.
+   */
+  const columnasConFecha = cons.columnas.filter((c) => c.fecha !== null)
+  if (columnasConFecha.length > 0 && fechasCron.size > 0) {
+    // Hay que mirar en las dos direcciones. Con una sola no basta: el listado de
+    // un curso corto puede cuadrar entero contra el cronograma de uno largo por
+    // pura casualidad (las 4 fechas de Bienestar caen todas en días de Heridas).
+    const columnasCruzadas = columnasConFecha.filter((c) => c.usada).length
+    const fechasCubiertas = [...fechasCron].filter((f) => porFecha.has(f)).length
+    const cobertura = Math.min(
+      columnasCruzadas / columnasConFecha.length,
+      fechasCubiertas / fechasCron.size,
+    )
+    const detalle =
+      `${columnasCruzadas} de ${columnasConFecha.length} columna(s) del CONSOLIDADO ` +
+      `cruzan con una sesión, y ${fechasCubiertas} de ${fechasCron.size} fecha(s) del ` +
+      'cronograma tienen columna'
+    if (cobertura < 0.25) {
+      incidencias.push({
+        severidad: 'error',
+        mensaje: `El cronograma y el listado no parecen del mismo curso: ${detalle}.`,
+        donde: [entrada.cronograma?.archivo, entrada.listado?.archivo].filter(Boolean).join(' + '),
+        sugerencia: 'Comprueba que los dos Excel sean del mismo programa; suelen estar en la misma carpeta «Listado de Clases».',
+      })
+    } else if (cobertura < 0.6) {
+      // Zona gris: puede ser un CONSOLIDADO al que aún le faltan columnas, así
+      // que se avisa pero no se bloquea.
+      incidencias.push({
+        severidad: 'aviso',
+        mensaje: `Los dos archivos cruzan poco: ${detalle}. Revisa que sean del mismo curso o que al CONSOLIDADO no le falten columnas.`,
+        donde: [entrada.cronograma?.archivo, entrada.listado?.archivo].filter(Boolean).join(' + '),
+      })
+    }
+  }
+
   const huerfanas = cons.columnas.filter((c) => !c.usada && c.fecha !== null)
   if (huerfanas.length) {
     incidencias.push({
