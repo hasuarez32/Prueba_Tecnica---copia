@@ -21,6 +21,10 @@ Grupo Integracion Sensorial/
 # Salidas del script de Python: contienen los mismos datos personales.
 base_consolidada.xlsx
 
+# Datos de prueba: Excel sintéticos para ensayar la carga de cursos. No son
+# entregable y se regeneran con `python datos_prueba/generar_datos_prueba.py`.
+datos_prueba/
+
 # Modelo de Power BI: lleva los datos incrustados.
 *.pbix
 
