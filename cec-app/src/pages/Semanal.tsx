@@ -345,9 +345,12 @@ export function Semanal() {
                             className="m-[3px] h-[34px] min-w-[38px] rounded-lg flex items-center justify-center text-sm font-semibold"
                             style={{
                               background: celda
-                                ? `color-mix(in srgb, var(--cyan) ${intensidad * 100}%, transparent)`
+                                ? `color-mix(in srgb, var(--celda-relleno) ${intensidad * 100}%, transparent)`
                                 : 'transparent',
-                              color: celda && intensidad > 0.55 ? 'var(--pill-tab-fg)' : 'var(--heading)',
+                              // Una sola tinta por tema: los tokens están
+                              // elegidos para ser legibles en toda la rampa, así
+                              // que no hace falta cambiarla según la intensidad.
+                              color: celda ? 'var(--celda-tinta)' : 'var(--heading)',
                             }}
                             title={celda
                               ? `${f.nombre} · ${celda.n} sesión(es), ${celda.horas} h`

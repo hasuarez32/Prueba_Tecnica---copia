@@ -46,7 +46,7 @@ Otros comandos:
 ```bash
 npm run build        # compila a dist/ (typecheck + bundle)
 npm run preview      # sirve dist/ para revisar el build
-npm test             # 70 pruebas: ETL contra los Excel reales + interfaz
+npm test             # 74 pruebas: ETL contra los Excel reales + interfaz
 npm run seed         # regenera public/data/seed.json desde las 8 carpetas
 npm run typecheck    # sólo TypeScript
 ```
@@ -333,6 +333,9 @@ campo al modelo es añadir una línea ahí.
 - Los selectores de semana y programa son comboboxes con búsqueda (patrón
   WAI-ARIA): se escribe para filtrar y se navega con flechas, Inicio, Fin,
   Enter y Escape. Un `<select>` nativo deja de servir con 22 semanas.
+- El mapa de calor usa una rampa distinta en cada tema: el cyan de marca sobre
+  fondo oscuro dejaba el número en 1,2:1. Hay pruebas que fijan el contraste de
+  toda la rampa en AA (4,5:1) para los dos temas.
 - Foco de teclado visible, salto al contenido, tablas con `<caption>` y
   encabezados asociados, gráfico con alternativa textual para lectores de
   pantalla, y `role="status"` en los cambios que importan.
@@ -342,7 +345,7 @@ campo al modelo es añadir una línea ahí.
 
 ## Verificación
 
-`npm test` corre 70 pruebas. Las del ETL leen **los Excel reales** de las 8
+`npm test` corre 74 pruebas. Las del ETL leen **los Excel reales** de las 8
 carpetas y comparan contra `base_consolidada.xlsx`; las de interfaz montan la
 app y leen los números **de la pantalla**.
 

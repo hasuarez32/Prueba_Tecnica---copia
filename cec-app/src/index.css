@@ -43,6 +43,13 @@
   --pill-fut-bg: #ebeef4;
   --pill-fut-fg: #4d5a78;
   --ring: rgba(63, 207, 207, 0.55);
+
+  /* Mapa de calor. El relleno se mezcla con el fondo de la tarjeta según la
+     intensidad, así que la tinta tiene que ser legible sobre TODA la rampa, no
+     sólo sobre el extremo lleno. Con estos valores el contraste va de 6,8:1
+     (celda llena) a 11,7:1 (celda casi vacía). */
+  --celda-relleno: #3fcfcf;
+  --celda-tinta: #06373a;
 }
 
 .dark {
@@ -81,6 +88,12 @@
   --pill-fut-bg: #1b2647;
   --pill-fut-fg: #b3bed8;
   --ring: rgba(79, 216, 216, 0.7);
+
+  /* En oscuro la rampa va del navy de la tarjeta a un teal profundo, no al cyan
+     brillante: con cyan la celda llena quedaba en 1,2:1 —ilegible— y las
+     intermedias no alcanzaban AA con ninguna tinta. Así va de 5,3:1 a 13,6:1. */
+  --celda-relleno: #1f6f76;
+  --celda-tinta: #eaf7f7;
 }
 
 @layer base {
