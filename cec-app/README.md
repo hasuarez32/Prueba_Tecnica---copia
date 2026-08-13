@@ -46,7 +46,7 @@ Otros comandos:
 ```bash
 npm run build        # compila a dist/ (typecheck + bundle)
 npm run preview      # sirve dist/ para revisar el build
-npm test             # 74 pruebas: ETL contra los Excel reales + interfaz
+npm test             # 77 pruebas: ETL contra los Excel reales + interfaz
 npm run seed         # regenera public/data/seed.json desde las 8 carpetas
 npm run typecheck    # sólo TypeScript
 ```
@@ -251,6 +251,10 @@ por sesión multiplicaría las faltas de ese participante por cuatro.
 Al soltar los archivos, la app dice **qué, dónde y por qué**, separando lo que
 bloquea de lo que no:
 
+Los archivos se **acumulan**: se puede subir el cronograma, y el listado en otro
+momento. Una lista de requisitos muestra qué falta y qué ya está puesto, y cada
+archivo se puede quitar. Subir uno con el mismo nombre lo reemplaza.
+
 - **Errores** (bloquean la importación): falta la hoja `CONSOLIDADO`, no
   aparece la columna `Fecha` del cronograma, una fecha no se puede interpretar,
   el archivo no es un Excel o está dañado.
@@ -345,7 +349,7 @@ campo al modelo es añadir una línea ahí.
 
 ## Verificación
 
-`npm test` corre 74 pruebas. Las del ETL leen **los Excel reales** de las 8
+`npm test` corre 77 pruebas. Las del ETL leen **los Excel reales** de las 8
 carpetas y comparan contra `base_consolidada.xlsx`; las de interfaz montan la
 app y leen los números **de la pantalla**.
 

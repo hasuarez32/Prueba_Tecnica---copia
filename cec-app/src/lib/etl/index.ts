@@ -3,7 +3,9 @@
  * archivos `.xlsx` a la base consolidada en memoria.
  */
 
-import type { CursoImportado, Incidencia, ResultadoImportacion, BaseConsolidada } from './types'
+import type {
+  CursoImportado, Incidencia, ResultadoImportacion, BaseConsolidada, Clasificacion,
+} from './types'
 import { leerLibro } from './sheet'
 import { construirCurso, type EntradaCurso } from './build'
 import { pareceCronograma, pareceListado } from './consolidado'
@@ -40,11 +42,16 @@ export function importarArchivos(
 ): ResultadoImportacion {
   const incidencias: Incidencia[] = []
 
+  const clasificacion: Clasificacion = {
+    cronograma: null, listado: null, evidencias: [], ignorados: [],
+  }
+
   if (archivos.length === 0) {
     return {
       ok: false,
       curso: null,
       resumen: null,
+      clasificacion,
       incidencias: [{
         severidad: 'error',
         mensaje: 'No se recibió ningún archivo.',
@@ -63,6 +70,7 @@ export function importarArchivos(
     // son la evidencia fotográfica del programa.
     if (RE_IMAGEN.test(f.nombre)) {
       evidencias++
+      clasificacion.evidencias.push(f.nombre)
       continue
     }
     if (!/\.xlsx?$/i.test(f.nombre) && !/\.xlsm$/i.test(f.nombre)) {
@@ -72,6 +80,7 @@ export function importarArchivos(
         donde: f.nombre,
         sugerencia: 'Sólo se aceptan archivos .xlsx o .xls con las hojas del CEC.',
       })
+      clasificacion.ignorados.push(f.nombre)
       continue
     }
 
@@ -85,6 +94,7 @@ export function importarArchivos(
         donde: f.nombre,
         sugerencia: 'Vuelve a exportarlo desde Excel y súbelo de nuevo.',
       })
+      clasificacion.ignorados.push(f.nombre)
       continue
     }
 
@@ -92,12 +102,16 @@ export function importarArchivos(
     const porNombre = /^cronograma/i.test(f.nombre.trim())
     if ((porNombre || pareceCronograma(libro)) && !cronograma && !pareceListado(libro)) {
       cronograma = { libro, archivo: f.nombre }
+      clasificacion.cronograma = f.nombre
     } else if (pareceListado(libro) && !listado) {
       listado = { libro, archivo: f.nombre }
+      clasificacion.listado = f.nombre
     } else if (pareceCronograma(libro) && !cronograma) {
       cronograma = { libro, archivo: f.nombre }
+      clasificacion.cronograma = f.nombre
     } else {
       sinClasificar.push(f.nombre)
+      clasificacion.ignorados.push(f.nombre)
     }
   }
 
@@ -128,7 +142,7 @@ export function importarArchivos(
   const hayErrores = todas.some((i) => i.severidad === 'error')
 
   if (!curso || hayErrores) {
-    return { ok: false, curso: null, incidencias: todas, resumen: null }
+    return { ok: false, curso: null, incidencias: todas, resumen: null, clasificacion }
   }
 
   const fechas = curso.sesiones.map((s) => s.fecha).sort()
@@ -136,6 +150,7 @@ export function importarArchivos(
     ok: true,
     curso,
     incidencias: todas,
+    clasificacion,
     resumen: {
       archivo_cronograma: cronograma?.archivo ?? null,
       archivo_listado: listado?.archivo ?? null,

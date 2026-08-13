@@ -7,11 +7,11 @@
  * qué, separando errores (bloquean) de avisos (se importa igual).
  */
 
-import { useCallback, useRef, useState, type DragEvent } from 'react'
+import { useCallback, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useApp } from '../store/AppStore'
 import { Card, PageHead } from '../components/ui'
 import { importarArchivos, type ArchivoEntrada } from '../lib/etl'
-import type { Incidencia, ResultadoImportacion } from '../lib/etl/types'
+import type { Incidencia } from '../lib/etl/types'
 import { exportarJSON, exportarExcel, leerJSON } from '../lib/exporters'
 import { leerArchivoComoBuffer, leerArchivoComoTexto } from '../lib/archivos'
 import { numero, fechaLarga } from '../lib/format'
@@ -20,68 +20,80 @@ import {
   verificarAcceso, type ConfigGitHub,
 } from '../lib/github'
 
-interface Analisis {
-  resultado: ResultadoImportacion
-  archivos: string[]
-}
-
 export function Cursos() {
   const {
     base, derivada, agregarCurso, eliminarCurso, reemplazarBase, restaurarSemilla, limpiarTodo,
   } = useApp()
 
-  const [analisis, setAnalisis] = useState<Analisis | null>(null)
+  /**
+   * Los archivos se **acumulan**: un curso son dos Excel y casi nunca se
+   * arrastran juntos. Cada suelta suma a la lista en vez de reemplazarla, y
+   * subir un archivo con el mismo nombre lo sustituye.
+   */
+  const [archivos, setArchivos] = useState<ArchivoEntrada[]>([])
+  const [errorLectura, setErrorLectura] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
   const [sobre, setSobre] = useState(false)
   const [aviso, setAviso] = useState<{ tono: 'ok' | 'err'; texto: string } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const jsonRef = useRef<HTMLInputElement>(null)
 
-  const procesar = useCallback(async (lista: File[]) => {
+  // La validación se rehace sola cada vez que cambia la lista de archivos.
+  const resultado = useMemo(
+    () => (archivos.length > 0 ? importarArchivos(archivos) : null),
+    [archivos],
+  )
+
+  const agregarArchivos = useCallback(async (lista: File[]) => {
     if (lista.length === 0) return
     setOcupado(true)
     setAviso(null)
+    setErrorLectura(null)
     try {
-      const archivos: ArchivoEntrada[] = []
+      const nuevos: ArchivoEntrada[] = []
       for (const f of lista) {
-        archivos.push({ nombre: f.name, datos: await leerArchivoComoBuffer(f) })
+        nuevos.push({ nombre: f.name, datos: await leerArchivoComoBuffer(f) })
       }
-      const resultado = importarArchivos(archivos)
-      setAnalisis({ resultado, archivos: lista.map((f) => f.name) })
+      setArchivos((previos) => {
+        const porNombre = new Map(previos.map((a) => [a.nombre, a]))
+        for (const n of nuevos) porNombre.set(n.nombre, n) // mismo nombre: reemplaza
+        return [...porNombre.values()]
+      })
     } catch (e) {
       // Salvaguarda: ni un fallo inesperado debe dejar la pantalla muda.
-      setAnalisis({
-        resultado: {
-          ok: false, curso: null, resumen: null,
-          incidencias: [{
-            severidad: 'error',
-            mensaje: `No pude leer los archivos: ${(e as Error).message}`,
-            sugerencia: 'Verifica que sean .xlsx y vuelve a intentarlo.',
-          }],
-        },
-        archivos: lista.map((f) => f.name),
-      })
+      setErrorLectura(`No pude leer los archivos: ${(e as Error).message}`)
     } finally {
       setOcupado(false)
+      // Permite volver a elegir el mismo archivo si el usuario lo quitó antes.
+      if (inputRef.current) inputRef.current.value = ''
     }
+  }, [])
+
+  const quitarArchivo = useCallback((nombre: string) => {
+    setArchivos((previos) => previos.filter((a) => a.nombre !== nombre))
+  }, [])
+
+  const limpiarSeleccion = useCallback(() => {
+    setArchivos([])
+    setErrorLectura(null)
+    if (inputRef.current) inputRef.current.value = ''
   }, [])
 
   const onDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     setSobre(false)
-    void procesar(Array.from(e.dataTransfer.files))
-  }, [procesar])
+    void agregarArchivos(Array.from(e.dataTransfer.files))
+  }, [agregarArchivos])
 
   const confirmar = useCallback(async () => {
-    if (!analisis?.resultado.curso) return
-    await agregarCurso(analisis.resultado.curso)
+    if (!resultado?.curso) return
+    await agregarCurso(resultado.curso)
     setAviso({
       tono: 'ok',
-      texto: `«${analisis.resultado.curso.programa.programa}» quedó guardado en este dispositivo. El panel ya lo incluye.`,
+      texto: `«${resultado.curso.programa.programa}» quedó guardado en este dispositivo. El panel ya lo incluye.`,
     })
-    setAnalisis(null)
-    if (inputRef.current) inputRef.current.value = ''
-  }, [analisis, agregarCurso])
+    limpiarSeleccion()
+  }, [resultado, agregarCurso, limpiarSeleccion])
 
   const importarJSON = useCallback(async (f: File) => {
     const { base: nueva, error } = leerJSON(await leerArchivoComoTexto(f))
@@ -93,8 +105,15 @@ export function Cursos() {
     setAviso({ tono: 'ok', texto: `Base restaurada: ${nueva.cursos.length} curso(s).` })
   }, [reemplazarBase])
 
-  const errores = analisis?.resultado.incidencias.filter((i) => i.severidad === 'error') ?? []
-  const avisos = analisis?.resultado.incidencias.filter((i) => i.severidad === 'aviso') ?? []
+  // «Falta el cronograma / el listado» no es un fallo mientras se están
+  // arrastrando archivos: es un paso pendiente, y lo comunica la lista de
+  // requisitos. Mostrarlo además en rojo asusta sin motivo.
+  const errores = (resultado?.incidencias ?? []).filter(
+    (i) => i.severidad === 'error' && !i.codigo,
+  )
+  const avisos = (resultado?.incidencias ?? []).filter((i) => i.severidad === 'aviso')
+  const clasificacion = resultado?.clasificacion
+  const completo = !!clasificacion?.cronograma && !!clasificacion?.listado
 
   return (
     <div className="wrap pb-16">
@@ -164,28 +183,75 @@ export function Cursos() {
                 accept=".xlsx,.xls,.xlsm"
                 multiple
                 className="sr-only"
-                onChange={(e) => void procesar(Array.from(e.target.files ?? []))}
+                onChange={(e) => void agregarArchivos(Array.from(e.target.files ?? []))}
               />
               <label htmlFor="archivos" className="btn btn-outline cursor-pointer inline-flex">
-                {ocupado ? 'Leyendo…' : 'Seleccionar archivos'}
+                {ocupado ? 'Leyendo…' : archivos.length ? 'Añadir otro archivo' : 'Seleccionar archivos'}
               </label>
             </div>
 
-            {analisis && (
+            {errorLectura && (
+              <p
+                role="alert"
+                className="mt-3.5 rounded-2xl px-4 py-3 text-[13px] border"
+                style={{
+                  borderColor: 'rgba(255,61,139,.45)',
+                  background: 'var(--pill-pend-bg)',
+                  color: 'var(--pill-pend-fg)',
+                }}
+              >
+                {errorLectura}
+              </p>
+            )}
+
+            {archivos.length > 0 && clasificacion && (
               <div aria-live="polite">
-                {analisis.resultado.ok && analisis.resultado.resumen && (
+                {/* Qué falta por subir. Se puede llegar en dos viajes. */}
+                <ul className="list-none p-0 mt-4 mb-1 flex flex-col gap-1.5">
+                  <Requisito
+                    etiqueta="Cronograma"
+                    archivo={clasificacion.cronograma}
+                    onQuitar={quitarArchivo}
+                  />
+                  <Requisito
+                    etiqueta="Listado de participantes"
+                    archivo={clasificacion.listado}
+                    onQuitar={quitarArchivo}
+                  />
+                  {clasificacion.evidencias.length > 0 && (
+                    <li className="flex items-center gap-2.5 text-[13px]">
+                      <span style={{ color: 'var(--green)' }} aria-hidden>✓</span>
+                      <span className="text-muted">
+                        Evidencia fotográfica ·{' '}
+                        <b className="text-heading font-semibold">
+                          {clasificacion.evidencias.length} archivo
+                          {clasificacion.evidencias.length === 1 ? '' : 's'}
+                        </b>
+                      </span>
+                    </li>
+                  )}
+                </ul>
+
+                {!completo && (
+                  <p className="card-hint mt-2">
+                    Falta {!clasificacion.cronograma ? 'el cronograma' : 'el listado de participantes'}.
+                    Arrástralo o búscalo con «Añadir otro archivo»; no hace falta subirlos a la vez.
+                  </p>
+                )}
+
+                {completo && resultado?.ok && resultado.resumen && (
                   <BloqueValidacion
                     tono="ok"
-                    titulo={analisis.resultado.resumen.archivo_cronograma ?? 'Cronograma'}
+                    titulo={resultado.resumen.programa}
                     insignia="válido"
-                    meta={`${analisis.resultado.resumen.n_sesiones} sesiones · ${analisis.resultado.resumen.rango} · ${analisis.resultado.resumen.n_participantes} participantes`}
+                    meta={`${resultado.resumen.n_sesiones} sesiones · ${resultado.resumen.rango} · ${resultado.resumen.n_participantes} participantes`}
                   />
                 )}
 
                 {errores.length > 0 && (
                   <BloqueValidacion
                     tono="err"
-                    titulo={analisis.archivos.join(', ')}
+                    titulo={clasificacion.listado ?? clasificacion.cronograma ?? 'Archivos'}
                     insignia={`${errores.length} ${errores.length === 1 ? 'problema' : 'problemas'}`}
                     items={errores}
                   />
@@ -201,19 +267,18 @@ export function Cursos() {
                 )}
 
                 <div className="flex gap-2.5 justify-end mt-4 flex-wrap">
-                  <button
-                    className="btn btn-outline"
-                    onClick={() => { setAnalisis(null); if (inputRef.current) inputRef.current.value = '' }}
-                  >
+                  <button className="btn btn-outline" onClick={limpiarSeleccion}>
                     Descartar
                   </button>
                   <button
                     className="btn btn-pink"
-                    disabled={!analisis.resultado.ok}
+                    disabled={!resultado?.ok}
                     onClick={() => void confirmar()}
-                    title={analisis.resultado.ok
+                    title={resultado?.ok
                       ? 'Guardar el curso en este dispositivo'
-                      : 'Corrige los errores para poder agregarlo'}
+                      : completo
+                        ? 'Corrige los errores para poder agregarlo'
+                        : 'Sube los dos archivos del curso'}
                   >
                     Agregar curso
                   </button>
@@ -363,6 +428,47 @@ export function Cursos() {
         </div>
       </div>
     </div>
+  )
+}
+
+/* ─────────────────────────── lista de requisitos ─────────────────────────── */
+
+/** Una fila de «lo que hace falta»: el archivo puesto, o el hueco por llenar. */
+function Requisito({
+  etiqueta, archivo, onQuitar,
+}: {
+  etiqueta: string
+  archivo: string | null
+  onQuitar: (nombre: string) => void
+}) {
+  return (
+    <li className="flex items-center gap-2.5 text-[13px] min-w-0">
+      <span
+        aria-hidden
+        style={{ color: archivo ? 'var(--green)' : 'var(--muted)' }}
+      >
+        {archivo ? '✓' : '○'}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="text-muted">{etiqueta} · </span>
+        {archivo ? (
+          <b className="text-heading font-semibold break-all">{archivo}</b>
+        ) : (
+          <span style={{ color: 'var(--muted)' }}>pendiente</span>
+        )}
+      </span>
+      {archivo && (
+        <button
+          type="button"
+          className="btn btn-outline px-2 py-0.5 text-[11px] shrink-0"
+          onClick={() => onQuitar(archivo)}
+          aria-label={`Quitar ${archivo}`}
+          title="Quitar este archivo"
+        >
+          ×
+        </button>
+      )}
+    </li>
   )
 }
 

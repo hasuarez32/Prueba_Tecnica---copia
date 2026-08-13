@@ -44,6 +44,12 @@ export type SeveridadIncidencia = 'error' | 'aviso'
  */
 export interface Incidencia {
   severidad: SeveridadIncidencia
+  /**
+   * Identificador estable para los casos que la interfaz trata distinto.
+   * `falta-cronograma` y `falta-listado` no son fallos mientras el usuario
+   * sigue arrastrando archivos: son pasos que le quedan por dar.
+   */
+  codigo?: 'falta-cronograma' | 'falta-listado'
   /** Qué pasó, en una frase. */
   mensaje: string
   /** Dónde: archivo, hoja, columna o celda. */
@@ -223,11 +229,23 @@ export interface BaseDerivada {
   }
 }
 
+/** Qué papel cumple cada archivo recibido. Se calcula siempre, aunque falten. */
+export interface Clasificacion {
+  cronograma: string | null
+  listado: string | null
+  /** Imágenes reconocidas como evidencia fotográfica. */
+  evidencias: string[]
+  /** Archivos que no son ni cronograma, ni listado, ni imagen. */
+  ignorados: string[]
+}
+
 /** Resultado de intentar importar un par de archivos. */
 export interface ResultadoImportacion {
   ok: boolean
   curso: CursoImportado | null
   incidencias: Incidencia[]
+  /** Siempre presente: la interfaz la usa para mostrar qué falta por subir. */
+  clasificacion: Clasificacion
   resumen: {
     archivo_cronograma: string | null
     archivo_listado: string | null

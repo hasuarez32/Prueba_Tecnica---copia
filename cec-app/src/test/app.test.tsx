@@ -367,7 +367,83 @@ describe('Semanal — carga por día (§6)', () => {
   })
 })
 
+describe('Cursos — carga en dos viajes', () => {
+  /**
+   * Un curso son dos Excel y casi nunca se arrastran juntos. Los archivos se
+   * acumulan: se sube uno, luego el otro, y sólo entonces se puede crear.
+   */
+  it.skipIf(!HAY_EXCEL)('acepta el cronograma primero y el listado después', async () => {
+    await montar()
+    await irA('Cursos')
+    await screen.findByText('Agregar curso')
+
+    const dir = path.join(RAIZ, 'Bienestar integral y felicidad', 'Equipo Logístico', 'Listado de Clases')
+    const nombres = fs.readdirSync(dir).filter((f) => /\.xlsx$/i.test(f))
+    const archivo = (n: string) =>
+      new File([new Uint8Array(fs.readFileSync(path.join(dir, n)))], n)
+    const input = () => document.getElementById('archivos') as HTMLInputElement
+
+    // ── primer viaje: sólo el cronograma
+    await userEvent.upload(input(), archivo(nombres.find((n) => /^cronograma/i.test(n))!))
+
+    expect(await screen.findByText(/Falta el listado de participantes/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Agregar curso' })).toBeDisabled()
+    // El cronograma ya aparece como cumplido, no como error.
+    expect(screen.getByText('Cronograma_Felicidad.xlsx')).toBeInTheDocument()
+    expect(screen.getByText('pendiente')).toBeInTheDocument()
+
+    // ── segundo viaje: el listado. No se pierde lo anterior.
+    await userEvent.upload(input(), archivo(nombres.find((n) => !/^cronograma/i.test(n))!))
+
+    expect(await screen.findByText('válido')).toBeInTheDocument()
+    expect(screen.getByText(/4 sesiones · 25\/jul → 15\/ago · 9 participantes/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Agregar curso' })).toBeEnabled()
+    expect(screen.queryByText('pendiente')).toBeNull()
+  })
+
+  it.skipIf(!HAY_EXCEL)('permite quitar un archivo y volver a dejarlo incompleto', async () => {
+    await montar()
+    await irA('Cursos')
+    await screen.findByText('Agregar curso')
+
+    const dir = path.join(RAIZ, 'Bienestar integral y felicidad', 'Equipo Logístico', 'Listado de Clases')
+    const archivos = fs.readdirSync(dir)
+      .filter((f) => /\.xlsx$/i.test(f))
+      .map((f) => new File([new Uint8Array(fs.readFileSync(path.join(dir, f)))], f))
+
+    await userEvent.upload(document.getElementById('archivos') as HTMLInputElement, archivos)
+    expect(await screen.findByText('válido')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Quitar Cronograma_Felicidad/i }))
+
+    expect(await screen.findByText(/Falta el cronograma/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Agregar curso' })).toBeDisabled()
+  })
+
+  it.skipIf(!HAY_EXCEL)('guarda el curso y limpia la selección', async () => {
+    await montar()
+    await irA('Cursos')
+    await screen.findByText('Agregar curso')
+
+    const dir = path.join(RAIZ, 'Bienestar integral y felicidad', 'Equipo Logístico', 'Listado de Clases')
+    const archivos = fs.readdirSync(dir)
+      .filter((f) => /\.xlsx$/i.test(f))
+      .map((f) => new File([new Uint8Array(fs.readFileSync(path.join(dir, f)))], f))
+
+    await userEvent.upload(document.getElementById('archivos') as HTMLInputElement, archivos)
+    await screen.findByText('válido')
+    await userEvent.click(screen.getByRole('button', { name: 'Agregar curso' }))
+
+    expect(await screen.findByText(/quedó guardado en este dispositivo/)).toBeInTheDocument()
+    // La zona de carga vuelve a estar vacía, lista para el siguiente curso.
+    expect(screen.queryByText('válido')).toBeNull()
+    // El disparador es un <label> asociado al input, no un <button>.
+    expect(screen.getByText('Seleccionar archivos')).toBeInTheDocument()
+  })
+})
+
 describe('Guía de datos', () => {
+
 
   it('documenta las cinco páginas, los conceptos y las tablas', async () => {
     await montar()

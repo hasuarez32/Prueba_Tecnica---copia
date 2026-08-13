@@ -78,6 +78,7 @@ export function construirCurso(entrada: EntradaCurso): {
   if (!entrada.cronograma) {
     incidencias.push({
       severidad: 'error',
+      codigo: 'falta-cronograma',
       mensaje: 'Falta el archivo de cronograma: sin él no hay sesiones que mostrar.',
       donde: entrada.nombre,
       sugerencia: 'Sube también el Excel «Cronograma_*.xlsx» del curso.',
@@ -151,6 +152,7 @@ export function construirCurso(entrada: EntradaCurso): {
   } else {
     incidencias.push({
       severidad: 'error',
+      codigo: 'falta-listado',
       mensaje: 'Falta el archivo de listado de participantes: sin él no hay asistencia ni tabulación.',
       donde: entrada.nombre,
       sugerencia: 'Sube también el Excel «*ListadodeParticipantes*.xlsx» del curso.',
