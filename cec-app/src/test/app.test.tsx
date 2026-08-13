@@ -435,7 +435,60 @@ describe('Cursos — validación de la carga', () => {
   })
 })
 
+describe('navegación interna (HashRouter)', () => {
+  /**
+   * Con HashRouter el hash de la URL es la ruta. Un `<a href="#seccion">`
+   * cambia la ruta a «seccion», que no existe, y el usuario acaba en Resumen.
+   * Esta prueba impide que vuelva a colarse un ancla interna.
+   */
+  it('ninguna página usa anclas #seccion, que romperían el enrutado', async () => {
+    await montar()
+    for (const pagina of ['Resumen', 'Semanal', 'Tabulación', 'Académico', 'Cursos', 'Guía'] as const) {
+      await irA(pagina)
+      await new Promise((r) => setTimeout(r, 60))
+      const anclas = Array.from(document.querySelectorAll('a[href^="#"]'))
+        // `#/algo` son rutas legítimas del HashRouter. Lo peligroso es
+        // `#seccion`, que el router leería como una ruta inexistente.
+        .filter((a) => !a.getAttribute('href')?.startsWith('#/'))
+        // El enlace de salto conserva el href por convención, pero intercepta
+        // el clic: se comprueba aparte, más abajo.
+        .filter((a) => !a.classList.contains('skip-link'))
+      expect(
+        anclas.map((a) => a.getAttribute('href')),
+        `${pagina} tiene anclas internas que llevarían a la ruta comodín`,
+      ).toEqual([])
+    }
+  })
+
+  it('el índice de la guía desplaza sin cambiar de página', async () => {
+    await montar()
+    await irA('Guía')
+    await screen.findByRole('heading', { level: 2, name: 'Conceptos clave' })
+
+    const indice = screen.getByRole('navigation', { name: 'Secciones de la guía' })
+    await userEvent.click(within(indice).getByRole('button', { name: 'Conceptos clave' }))
+
+    // Sigue en la guía: la ruta no cambió y el contenido tampoco.
+    expect(window.location.hash).toBe('#/guia')
+    expect(screen.getByRole('heading', { level: 2, name: 'Diccionario de datos' })).toBeInTheDocument()
+    // Y el foco viajó a la sección, no se quedó en el botón.
+    expect(document.activeElement?.id).toBe('conceptos')
+  })
+
+  it('el enlace de salto lleva al contenido sin salir de la página', async () => {
+    await montar()
+    await irA('Tabulación')
+    await screen.findByText('Pendientes por programa')
+
+    await userEvent.click(screen.getByText('Saltar al contenido'))
+
+    expect(window.location.hash).toBe('#/tabulacion')
+    expect(document.activeElement?.id).toBe('principal')
+  })
+})
+
 describe('responsive', () => {
+
   /**
    * jsdom no calcula layout, así que no puede medir desbordes. Pero sí puede
    * verificar la causa estructural más común: una tabla ancha suelta en el

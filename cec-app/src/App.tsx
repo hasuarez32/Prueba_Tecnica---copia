@@ -1,4 +1,5 @@
 import { HashRouter, Route, Routes } from 'react-router-dom'
+import { irASeccion } from './lib/navegacion'
 import { AppStore, useApp } from './store/AppStore'
 import { NavBar } from './components/NavBar'
 import { Resumen } from './pages/Resumen'
@@ -29,7 +30,18 @@ function BarraOrigen() {
 function Layout() {
   return (
     <>
-      <a href="#principal" className="skip-link">Saltar al contenido</a>
+      <a
+        href="#principal"
+        className="skip-link"
+        onClick={(e) => {
+          // Con HashRouter, dejar que el navegador siga el ancla cambiaría la
+          // ruta a «principal» y sacaría al usuario de la página actual.
+          e.preventDefault()
+          irASeccion('principal')
+        }}
+      >
+        Saltar al contenido
+      </a>
       <NavBar />
       <BarraOrigen />
       <main id="principal" tabIndex={-1}>

@@ -16,6 +16,7 @@ import {
   CALIDAD, CONCEPTOS, FUENTES, PAGINAS_DOC, TABLAS, type CampoDoc,
 } from '../lib/diccionario'
 import { norm } from '../lib/etl/normalize'
+import { irASeccion } from '../lib/navegacion'
 import { fechaLarga, numero, pct } from '../lib/format'
 
 const SECCIONES = [
@@ -85,12 +86,13 @@ export function Guia() {
         <ul className="list-none p-0 m-0 flex flex-wrap gap-2">
           {SECCIONES.map((s) => (
             <li key={s.id}>
-              <a
-                href={`#${s.id}`}
-                className="control no-underline text-[13px] px-3.5 h-9 inline-flex"
+              <button
+                type="button"
+                onClick={() => irASeccion(s.id)}
+                className="control text-[13px] px-3.5 h-9"
               >
                 {s.titulo}
-              </a>
+              </button>
             </li>
           ))}
         </ul>
