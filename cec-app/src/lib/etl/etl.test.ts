@@ -279,7 +279,89 @@ conExcel('importación de las 8 carpetas de ejemplo', () => {
   })
 })
 
+conExcel('correcciones del modelo de datos', () => {
+  it('sumar horas con «cuenta_en_total» da el total real', () => {
+    const base = baseCompleta()
+    const d = derivar(base, CORTE)
+
+    const sinFiltrar = d.asistencia.reduce((a, r) => a + r.horas_inasistencia, 0)
+    const conFiltro = d.asistencia
+      .filter((r) => r.cuenta_en_total)
+      .reduce((a, r) => a + r.horas_inasistencia, 0)
+    const real = d.participantes.reduce((a, p) => a + p.total_inasistencia, 0)
+
+    // La suma directa infla porque varias sesiones comparten columna.
+    expect(sinFiltrar).toBeGreaterThan(real)
+    expect(conFiltro).toBe(real)
+    expect(real).toBe(203)
+  })
+
+  it('marca exactamente una fila por participante y columna', () => {
+    const d = derivar(baseCompleta(), CORTE)
+    const grupos = new Map<string, number>()
+    for (const r of d.asistencia.filter((x) => x.cuenta_en_total)) {
+      const k = `${r.programa_id}|${r.documento}|${r.columna}`
+      grupos.set(k, (grupos.get(k) ?? 0) + 1)
+    }
+    expect([...grupos.values()].every((n) => n === 1)).toBe(true)
+    // Y no se pierde ninguna columna por el camino.
+    const todas = new Set(d.asistencia.map((r) => `${r.programa_id}|${r.documento}|${r.columna}`))
+    expect(grupos.size).toBe(todas.size)
+  })
+
+  it('el calendario cubre años completos, como pide Power BI', () => {
+    const d = derivar(baseCompleta(), CORTE)
+    expect(d.calendario[0].fecha).toBe('2026-01-01')
+    expect(d.calendario[d.calendario.length - 1].fecha).toBe('2026-12-31')
+    expect(d.calendario).toHaveLength(365)
+    // Sin huecos y con todas las fechas de sesión dentro.
+    const fechas = new Set(d.calendario.map((c) => c.fecha))
+    for (const s of d.sesiones) expect(fechas.has(s.fecha)).toBe(true)
+  })
+
+  it('separa dos cursos distintos que caen en el mismo programa_id', () => {
+    const base = baseCompleta()
+    const heridas = base.cursos.find((c) => c.programa.programa_id === 'HERIDAS')!
+
+    // Dos programas reales cuyos nombres largos producen el mismo slug.
+    const a = {
+      ...heridas,
+      programa: { ...heridas.programa, nombre_oficial: 'Diplomado en Gestión Ambiental Avanzada' },
+    }
+    const b = {
+      ...heridas,
+      programa: { ...heridas.programa, nombre_oficial: 'Diplomado en Gestión Ambiental Básica' },
+    }
+
+    const { cursos, duplicados } = consolidarCursos([a, b])
+    expect(cursos, 'los fundió en uno solo').toHaveLength(2)
+    expect(duplicados).toHaveLength(0)
+
+    const ids = cursos.map((c) => c.programa.programa_id)
+    expect(new Set(ids).size).toBe(2)
+    // El renombrado alcanza a las sesiones y a la asistencia, no sólo al programa.
+    for (const c of cursos) {
+      for (const s of c.sesiones) expect(s.programa_id).toBe(c.programa.programa_id)
+      for (const r of c.asistencia) expect(r.programa_id).toBe(c.programa.programa_id)
+      for (const p of c.participantes) expect(p.programa_id).toBe(c.programa.programa_id)
+    }
+    // Y los identificadores de sesión siguen sin chocar entre los dos.
+    const todas = cursos.flatMap((c) => c.sesiones.map((s) => s.id_sesion))
+    expect(new Set(todas).size).toBe(todas.length)
+  })
+
+  it('sigue fusionando el mismo programa repetido en varios meses', () => {
+    const base = baseCompleta()
+    const heridas = base.cursos.find((c) => c.programa.programa_id === 'HERIDAS')!
+    // Mismo nombre oficial: es el mismo curso en dos carpetas de mes.
+    const { cursos, duplicados } = consolidarCursos([heridas, { ...heridas }])
+    expect(cursos).toHaveLength(1)
+    expect(duplicados).toHaveLength(1)
+  })
+})
+
 conExcel('archivos de cursos distintos (§ validación)', () => {
+
   /**
    * Los dos Excel se arrastran a mano y es fácil mezclar el cronograma de un
    * programa con el listado de otro. El resultado sería una base inventada:

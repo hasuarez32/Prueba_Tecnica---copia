@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import os
 import re
 import sys
@@ -276,6 +277,33 @@ def identificar_programa(carpeta: str):
         if clave in n:
             return pid, corto
     return slug_id(carpeta), carpeta.strip()
+
+
+def resolver_ids(nombres):
+    """
+    Asigna un programa_id único a cada nombre de carpeta distinto.
+
+    El slug se trunca a 24 caracteres, así que dos programas con nombres largos
+    y parecidos producen el mismo id ("Diplomado en Gestión Ambiental Avanzada"
+    y "...Básica" dan los dos DIPLOMADO_EN_GESTION_AMB). Fundirlos sería peor
+    que un nombre feo: sus sesiones y participantes se mezclarían.
+
+    Dos carpetas con el **mismo** nombre sí comparten id a propósito: es el
+    mismo programa vigente en varios meses, y de eso se encarga la deduplicación.
+    """
+    asignados = {}   # programa_id -> nombre normalizado que lo ocupa
+    salida = {}      # nombre de carpeta -> (programa_id, nombre corto)
+    for nombre in sorted(set(nombres), key=norm):
+        pid, corto = identificar_programa(nombre)
+        n = norm(nombre)
+        duenio = asignados.get(pid)
+        if duenio is not None and duenio != n:
+            # Sufijo estable derivado del nombre completo, no del orden.
+            sufijo = hashlib.sha1(n.encode("utf-8")).hexdigest()[:4].upper()
+            pid = "%s_%s" % (pid[:19], sufijo)
+        asignados.setdefault(pid, n)
+        salida[nombre] = (pid, corto)
+    return salida
 
 
 # --------------------------------------------------------------------------
@@ -780,8 +808,8 @@ def emparejar(sesion, columnas_por_fecha):
 # Procesamiento por programa
 # --------------------------------------------------------------------------
 
-def procesar_programa(carpeta, ruta_clases, fecha_corte):
-    programa_id, programa = identificar_programa(carpeta)
+def procesar_programa(carpeta, ruta_clases, fecha_corte, identidad=None):
+    programa_id, programa = identidad or identificar_programa(carpeta)
     ruta_cron, ruta_lst = localizar_archivos(ruta_clases)
     n_evidencias = contar_evidencias(ruta_clases)
 
@@ -953,6 +981,9 @@ def procesar_programa(carpeta, ruta_clases, fecha_corte):
                 n_inasis += 0 if asistio else 1
                 filas_asistencia.append({
                     "id_registro": "%s|%s" % (id_sesion, p["documento"] or "F%d" % p["fila"]),
+                    # Se marca más abajo: sólo la primera fila de cada
+                    # participante × columna del CONSOLIDADO cuenta para sumar.
+                    "cuenta_en_total": False,
                     "programa_id": programa_id,
                     "id_sesion": id_sesion,
                     "fecha": fecha,
@@ -1028,19 +1059,31 @@ def procesar_programa(carpeta, ruta_clases, fecha_corte):
                                      ", ".join("%s→%s" % (c["etiqueta"], c["fecha"])
                                                for c in huerfanas[:6])))
 
+    # ---------------- marcar qué filas cuentan para las sumas
+    #
+    # El grano de fct_asistencia es participante x SESIÓN, pero el CONSOLIDADO
+    # tiene una columna por DÍA: cuando varias sesiones del mismo día comparten
+    # columna (Heridas tiene 4 el 24/07), la misma inasistencia aparece repetida
+    # en cada una. Sumar la columna directamente infla el total —hasta un 133 %
+    # en Heridas—, así que se marca una sola fila por participante y columna.
+    vistas_total = set()
+    for reg in filas_asistencia:
+        clave = (reg["documento"] or reg["nombre"], reg["_col"])
+        if clave not in vistas_total:
+            vistas_total.add(clave)
+            reg["cuenta_en_total"] = True
+
     # ---------------- dim_participantes
     filas_participantes = []
     for p in participantes:
-        # Σ recalculado: una sola vez por columna de CONSOLIDADO, aunque esa
-        # columna sirva a varias sesiones del mismo día (evita doble conteo).
+        # Σ deduplicado: se suman sólo las filas marcadas como contables, que es
+        # exactamente una por participante y columna del CONSOLIDADO.
         total = 0.0
-        vistos = set()
         for reg in filas_asistencia:
-            if reg["documento"] != p["documento"] or reg["_col"] in vistos:
+            if not reg["cuenta_en_total"]:
                 continue
-            if reg["nombre"] != p["nombre"]:
+            if reg["documento"] != p["documento"] or reg["nombre"] != p["nombre"]:
                 continue
-            vistos.add(reg["_col"])
             total += reg["horas_inasistencia"]
         if p["sigma"] is not None and abs(total - p["sigma"]) > 1e-6:
             INC.add(programa, "Σ de inasistencia del archivo (%g) ≠ recalculado (%g) "
@@ -1142,11 +1185,20 @@ def procesar_programa(carpeta, ruta_clases, fecha_corte):
 # --------------------------------------------------------------------------
 
 def construir_calendario(fechas):
+    """
+    Tabla de fechas de **años completos**.
+
+    Power BI exige que una tabla de fechas cubra años enteros para que funcione
+    la inteligencia de tiempo (TOTALYTD, SAMEPERIODLASTYEAR...). Con el rango
+    justo de las sesiones —del 9 de julio al 5 de diciembre— esas funciones dan
+    resultados raros o advertencia al marcarla como tabla de fechas.
+    """
     if not fechas:
         return pd.DataFrame(columns=["fecha", "anio", "mes", "mes_nombre", "dia",
                                      "dia_semana", "dia_semana_num", "semana_iso",
                                      "anio_semana", "es_fin_de_semana"])
-    inicio, fin = min(fechas), max(fechas)
+    inicio = dt.date(min(fechas).year, 1, 1)
+    fin = dt.date(max(fechas).year, 12, 31)
     filas = []
     d = inicio
     while d <= fin:
@@ -1190,7 +1242,8 @@ COLUMNAS = {
                        "dia_semana_num", "semana_iso", "anio_semana",
                        "es_fin_de_semana"],
     "fct_asistencia": ["id_registro", "programa_id", "id_sesion", "fecha", "documento",
-                       "nombre", "empresa", "horas_inasistencia", "asistio", "tabulada"],
+                       "nombre", "empresa", "horas_inasistencia", "asistio", "tabulada",
+                       "cuenta_en_total"],
     "dim_participantes": ["programa_id", "documento", "nombre", "empresa",
                           "total_inasistencia", "horas_falla_max", "en_riesgo"],
     "Parametros": ["parametro", "valor", "descripcion"],
@@ -1204,7 +1257,8 @@ COLUMNAS_ENTERAS = {"num_sesion", "anio", "mes", "dia", "dia_semana_num", "seman
 COLUMNAS_DECIMALES = {"intensidad_horaria", "valor_programa", "horas_totales",
                       "horas_falla_max", "pct_cumplimiento_tabulacion",
                       "horas_inasistencia", "total_inasistencia"}
-COLUMNAS_BOOLEANAS = {"asistio", "tabulada", "en_riesgo", "es_fin_de_semana"}
+COLUMNAS_BOOLEANAS = {"asistio", "tabulada", "en_riesgo", "es_fin_de_semana",
+                      "cuenta_en_total"}
 
 # Marcador para los vacíos de las columnas de TEXTO. Las columnas numéricas, de
 # fecha y booleanas se dejan realmente nulas: escribirles un texto las volvería
@@ -1483,6 +1537,9 @@ def main(argv=None):
     print("Programas detectados: %d" % len(programas))
     print("-" * 78)
 
+    # Ids resueltos de una vez, para poder detectar y romper las colisiones.
+    identidades = resolver_ids([c for c, _ in programas])
+
     resultados, orden, nombres_carpeta = {}, [], {}
     for carpeta, ruta_clases in programas:
         # La clave es la ruta, no el nombre: con la estructura por mes hay
@@ -1491,7 +1548,8 @@ def main(argv=None):
         orden.append(clave)
         nombres_carpeta[clave] = carpeta
         try:
-            r = procesar_programa(carpeta, ruta_clases, fecha_corte)
+            r = procesar_programa(carpeta, ruta_clases, fecha_corte,
+                                  identidades.get(carpeta))
             resultados[clave] = r
             print("  [OK]    %-32s %3d sesiones, %3d participantes"
                   % (r["programa"][:32], len(r["sesiones"]), len(r["participantes"])))

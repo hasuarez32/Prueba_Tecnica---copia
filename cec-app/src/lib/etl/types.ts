@@ -161,6 +161,14 @@ export interface Asistencia {
    * que varias filas comparten columna: sirve para deduplicar al sumar horas.
    */
   columna: number
+  /**
+   * Verdadero sólo en la primera fila de cada participante × columna.
+   *
+   * Sin esta marca, sumar `horas_inasistencia` infla el total: la misma
+   * inasistencia se repite en cada sesión que comparte columna (+133 % en
+   * Cuidado de Heridas). Filtrando por este campo la suma da el número real.
+   */
+  cuenta_en_total: boolean
 }
 
 export interface Participante {

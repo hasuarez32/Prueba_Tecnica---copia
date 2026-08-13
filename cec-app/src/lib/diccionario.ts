@@ -551,6 +551,7 @@ export const TABLAS: TablaDoc[] = [
       { campo: 'horas_inasistencia', tipo: 'número', descripcion: 'Horas que el participante faltó a esa sesión.', origen: 'El valor de la celda del CONSOLIDADO.', ejemplo: '0', nota: 'Cero significa que asistió completo. Es inasistencia, no asistencia.' },
       { campo: 'asistio', tipo: 'booleano', descripcion: 'Si se considera que asistió a la sesión.', origen: 'Calculado: horas_inasistencia menor que la intensidad de la sesión.', ejemplo: 'Sí' },
       { campo: 'columna', tipo: 'entero', descripcion: 'Columna del CONSOLIDADO de la que salió el valor.', origen: 'Índice interno.', ejemplo: '5', nota: 'Es lo que permite no contar dos veces la misma falta cuando varias sesiones comparten columna.' },
+      { campo: 'cuenta_en_total', tipo: 'booleano', descripcion: 'Marca la única fila de cada participante y columna que debe sumarse.', origen: 'Calculado al importar.', ejemplo: 'Sí', nota: 'Sin filtrar por este campo, sumar las horas infla el total: la misma inasistencia se repite en cada sesión que comparte columna (un 133 % de más en Cuidado de Heridas). La medida correcta filtra cuenta_en_total = verdadero.' },
     ],
   },
   {
@@ -572,7 +573,7 @@ export const TABLAS: TablaDoc[] = [
     nombre: 'Calendario',
     grano: 'Una fila por día, desde la primera hasta la última sesión',
     proposito:
-      'La dimensión de tiempo. En Power BI es la que permite filtrar por semana o mes; en la app sostiene la vista semanal.',
+      'La dimensión de tiempo. En Power BI es la que permite filtrar por semana o mes; en la app sostiene la vista semanal. Cubre años completos (1 de enero a 31 de diciembre), no sólo el rango de las sesiones, porque la inteligencia de tiempo de Power BI lo exige.',
     campos: [
       { campo: 'fecha', tipo: 'fecha', descripcion: 'El día.', origen: 'Generado.', ejemplo: '2026-08-11' },
       { campo: 'anio · mes · dia', tipo: 'entero', descripcion: 'Partes de la fecha.', origen: 'Derivado.', ejemplo: '2026 · 8 · 11' },

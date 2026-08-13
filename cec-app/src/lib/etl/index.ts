@@ -174,6 +174,33 @@ export function upsertCurso(base: BaseConsolidada, curso: CursoImportado): BaseC
   return { version: 1, generado_en: new Date().toISOString(), cursos }
 }
 
+/** Hash corto y estable (FNV-1a) para desempatar identificadores. */
+function sufijoEstable(texto: string): string {
+  let h = 0x811c9dc5
+  for (let i = 0; i < texto.length; i++) {
+    h ^= texto.charCodeAt(i)
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
+  return (h >>> 0).toString(16).slice(0, 4).toUpperCase()
+}
+
+/** Reescribe el `programa_id` de un curso y de todas sus filas. */
+function renombrarPrograma(curso: CursoImportado, id: string): CursoImportado {
+  const cambiarId = (viejo: string) => viejo.replace(curso.programa.programa_id, id)
+  return {
+    ...curso,
+    programa: { ...curso.programa, programa_id: id },
+    sesiones: curso.sesiones.map((s) => ({
+      ...s, programa_id: id, id_sesion: cambiarId(s.id_sesion),
+    })),
+    asistencia: curso.asistencia.map((a) => ({
+      ...a, programa_id: id,
+      id_sesion: cambiarId(a.id_sesion), id_registro: cambiarId(a.id_registro),
+    })),
+    participantes: curso.participantes.map((p) => ({ ...p, programa_id: id })),
+  }
+}
+
 /**
  * Deduplica cursos por `programa_id`.
  *
@@ -195,6 +222,32 @@ export function consolidarCursos(cursos: CursoImportado[]): {
     const lista = porId.get(c.programa.programa_id)
     if (lista) lista.push(c)
     else porId.set(c.programa.programa_id, [c])
+  }
+
+  /**
+   * Dos cursos distintos pueden caer en el mismo `programa_id`: el slug se
+   * trunca a 24 caracteres, así que «Diplomado en Gestión Ambiental Avanzada» y
+   * «…Básica» dan el mismo. Fundirlos sería peor que un identificador feo, así
+   * que se separan por su nombre oficial antes de deduplicar.
+   */
+  for (const [id, copias] of [...porId]) {
+    const porNombre = new Map<string, CursoImportado[]>()
+    for (const c of copias) {
+      const firma = c.programa.nombre_oficial || c.programa.programa
+      const lista = porNombre.get(firma)
+      if (lista) lista.push(c)
+      else porNombre.set(firma, [c])
+    }
+    if (porNombre.size < 2) continue
+    // El primero por orden alfabético conserva el id; los demás reciben un
+    // sufijo estable derivado de su propio nombre.
+    const nombres = [...porNombre.keys()].sort()
+    porId.set(id, porNombre.get(nombres[0])!)
+    for (const firma of nombres.slice(1)) {
+      const nuevoId = `${id.slice(0, 19)}_${sufijoEstable(firma)}`
+      const renombrados = porNombre.get(firma)!.map((c) => renombrarPrograma(c, nuevoId))
+      porId.set(nuevoId, renombrados)
+    }
   }
 
   const salida: CursoImportado[] = []

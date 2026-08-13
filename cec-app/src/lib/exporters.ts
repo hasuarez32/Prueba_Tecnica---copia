@@ -65,7 +65,7 @@ const HOJAS: Record<string, string[]> = {
   ],
   fct_asistencia: [
     'id_registro', 'programa_id', 'id_sesion', 'fecha', 'documento', 'nombre', 'empresa',
-    'horas_inasistencia', 'asistio', 'tabulada',
+    'horas_inasistencia', 'asistio', 'tabulada', 'cuenta_en_total',
   ],
   dim_participantes: [
     'programa_id', 'documento', 'nombre', 'empresa', 'total_inasistencia', 'horas_falla_max',

@@ -46,7 +46,7 @@ Otros comandos:
 ```bash
 npm run build        # compila a dist/ (typecheck + bundle)
 npm run preview      # sirve dist/ para revisar el build
-npm test             # 83 pruebas: ETL contra los Excel reales + interfaz
+npm test             # 88 pruebas: ETL contra los Excel reales + interfaz
 npm run seed         # regenera public/data/seed.json desde las 8 carpetas
 npm run typecheck    # sólo TypeScript
 ```
@@ -227,6 +227,24 @@ Esa distinción es la que sostiene todo el panel: una columna vacía de una clas
 que ya se dictó es una deuda administrativa; la misma columna vacía de una clase
 futura no es nada.
 
+### Sumar horas de inasistencia
+
+`fct_asistencia` tiene grano participante × **sesión**, pero el `CONSOLIDADO`
+tiene una columna por **día**. Cuando varias sesiones comparten columna —Heridas
+tiene cuatro el 24/07— la misma inasistencia aparece repetida en cada una, y
+sumar la columna directamente infla el total un 133 %.
+
+Por eso cada fila trae `cuenta_en_total`, verdadera sólo en la primera de cada
+participante × columna. La medida correcta en Power BI es:
+
+```dax
+Horas perdidas = CALCULATE(SUM(fct_asistencia[horas_inasistencia]),
+                           fct_asistencia[cuenta_en_total] = TRUE)
+```
+
+Para el total por participante también sirve `dim_participantes[total_inasistencia]`,
+que ya viene deduplicado.
+
 ### Estados de una sesión
 
 | Estado | Cuándo |
@@ -354,7 +372,7 @@ campo al modelo es añadir una línea ahí.
 
 ## Verificación
 
-`npm test` corre 83 pruebas. Las del ETL leen **los Excel reales** de las 8
+`npm test` corre 88 pruebas. Las del ETL leen **los Excel reales** de las 8
 carpetas y comparan contra `base_consolidada.xlsx`; las de interfaz montan la
 app y leen los números **de la pantalla**.
 

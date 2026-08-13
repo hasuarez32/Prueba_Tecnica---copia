@@ -126,11 +126,18 @@ export function estadoProgramaDe(
   return 'En ejecución'
 }
 
+/**
+ * Tabla de fechas de **años completos**.
+ *
+ * Power BI exige que la tabla de fechas cubra años enteros para que funcione la
+ * inteligencia de tiempo (TOTALYTD, SAMEPERIODLASTYEAR…). Con el rango justo de
+ * las sesiones esas funciones dan resultados raros o advertencia.
+ */
 export function construirCalendario(fechas: ISODate[]): DiaCalendario[] {
   if (fechas.length === 0) return []
   const ordenadas = [...fechas].sort()
-  const inicio = ordenadas[0]
-  const fin = ordenadas[ordenadas.length - 1]
+  const inicio = `${ordenadas[0].slice(0, 4)}-01-01`
+  const fin = `${ordenadas[ordenadas.length - 1].slice(0, 4)}-12-31`
   const dias: DiaCalendario[] = []
   let cursor = inicio
   let guarda = 0

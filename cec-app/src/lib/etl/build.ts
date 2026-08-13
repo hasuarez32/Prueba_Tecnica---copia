@@ -300,6 +300,8 @@ export function construirCurso(entrada: EntradaCurso): {
           asistio,
           tabulada: true,
           columna: columna.col,
+          // Se marca abajo, cuando ya están todas las filas.
+          cuenta_en_total: false,
         })
       }
     }
@@ -419,17 +421,32 @@ export function construirCurso(entrada: EntradaCurso): {
     })
   }
 
+  /*
+   * Qué filas cuentan para sumar horas.
+   *
+   * El grano es participante × sesión, pero el CONSOLIDADO tiene una columna
+   * por día: cuando varias sesiones comparten columna, la misma inasistencia
+   * aparece repetida. Se marca una sola fila por participante y columna para
+   * que `SUM` filtrado dé el total real.
+   */
+  const vistasTotal = new Set<string>()
+  for (const reg of asistencia) {
+    const clave = `${reg.documento || reg.nombre}|${reg.columna}`
+    if (!vistasTotal.has(clave)) {
+      vistasTotal.add(clave)
+      reg.cuenta_en_total = true
+    }
+  }
+
   // ── participantes y riesgo académico
   const participantes: Participante[] = []
   for (const p of cons.participantes) {
     // Σ deduplicado por columna: una columna sirve a varias sesiones del mismo
     // día, sumarla por sesión inflaría el total (§ riesgo académico).
-    const vistas = new Set<number>()
     let total = 0
     for (const reg of asistencia) {
+      if (!reg.cuenta_en_total) continue
       if (reg.documento !== p.documento || reg.nombre !== p.nombre) continue
-      if (vistas.has(reg.columna)) continue
-      vistas.add(reg.columna)
       total += reg.horas_inasistencia
     }
     if (p.sigma !== null && Math.abs(total - p.sigma) > 1e-6) {
