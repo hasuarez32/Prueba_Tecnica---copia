@@ -44,7 +44,7 @@ Otros comandos:
 ```bash
 npm run build        # compila a dist/ (typecheck + bundle)
 npm run preview      # sirve dist/ para revisar el build
-npm test             # 55 pruebas: ETL contra los Excel reales + interfaz
+npm test             # 58 pruebas: ETL contra los Excel reales + interfaz
 npm run seed         # regenera public/data/seed.json desde las 8 carpetas
 npm run typecheck    # sólo TypeScript
 ```
@@ -115,6 +115,17 @@ de `base_consolidada.xlsx` (`fct_sesiones`, `dim_programas`, `dim_calendario`,
 **3. Compartida vía GitHub (opcional).** *Cursos → Publicar para el equipo*
 hace un commit del JSON consolidado al repositorio con la API de GitHub. El
 despliegue lo recoge y todo el equipo ve los mismos datos.
+
+> **Cuidado con los datos personales.** Si el repositorio es público, publicar
+> ahí la base con los cursos reales expone nombres y cédulas a todo internet, de
+> forma permanente en el historial de git. Con repositorio público, usa esta vía
+> sólo para datos anonimizados. Para compartir los datos reales dentro del
+> equipo: *Exportar JSON*, enviarlo por el canal interno (Drive, Teams) y que
+> cada persona use *Importar JSON*. Así los datos nunca salen a la web.
+
+Las pruebas de interfaz usan un fixture propio (`src/test/fixtures/`), no el
+`seed.json` publicado: así publicar datos distintos no rompe el CI ni bloquea
+el despliegue.
 
 ### Configurar el token de GitHub
 
@@ -257,7 +268,9 @@ cec-app/
 │  ├─ lib/db.ts           ← IndexedDB
 │  ├─ lib/github.ts       ← commit del JSON vía API
 │  ├─ lib/exporters.ts    ← JSON, Excel y CSV
-│  └─ test/app.test.tsx   ← 27 pruebas de interfaz
+│  └─ test/
+│     ├─ app.test.tsx     ← 30 pruebas de interfaz
+│     └─ fixtures/        ← seed de ejemplo fijo, independiente del publicado
 ├─ scripts/seed.ts        ← genera public/data/seed.json
 └─ public/data/seed.json  ← datos de ejemplo publicados
 ```
@@ -308,7 +321,7 @@ campo al modelo es añadir una línea ahí.
 
 ## Verificación
 
-`npm test` corre 55 pruebas. Las del ETL leen **los Excel reales** de las 8
+`npm test` corre 58 pruebas. Las del ETL leen **los Excel reales** de las 8
 carpetas y comparan contra `base_consolidada.xlsx`; las de interfaz montan la
 app y leen los números **de la pantalla**.
 

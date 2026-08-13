@@ -29,7 +29,11 @@ const HAY_EXCEL = fs.existsSync(
 let semilla: string
 
 beforeAll(() => {
-  semilla = fs.readFileSync(path.join(APP, 'public', 'data', 'seed.json'), 'utf8')
+  // Fixture propio, NO `public/data/seed.json`. Ese archivo cambia cuando el
+  // equipo publica sus propios cursos, y estas pruebas verifican números fijos
+  // (130 sesiones, 74,6 %…): si dependieran de él, publicar datos distintos
+  // rompería el CI y bloquearía el despliegue del sitio.
+  semilla = fs.readFileSync(path.join(APP, 'src', 'test', 'fixtures', 'seed-ejemplo.json'), 'utf8')
 })
 
 beforeEach(() => {
