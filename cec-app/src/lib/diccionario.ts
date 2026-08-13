@@ -66,6 +66,11 @@ export const PAGINAS_DOC: PaginaDoc[] = [
           'Participantes cuya inasistencia acumulada ya superó el tope de su programa. Perdieron el derecho al certificado salvo que el programa haga una excepción.',
       },
       {
+        titulo: 'Programas',
+        detalle:
+          'La tabla dice en qué punto está cada curso: «En ejecución» si la fecha de corte cae entre su primera y su última sesión, «Por iniciar» si aún no empieza y «Finalizado» si ya cerró. Van primero los activos, que son los que hay que atender, con su periodo, su cumplimiento y quién coordina.',
+      },
+      {
         titulo: 'Estado por programa',
         detalle:
           'Una barra por programa. El ancho total es proporcional a su número de sesiones, y dentro se apilan tabuladas (cyan), pendientes (rosa) y futuras (gris). Sirve para ver de un golpe quién está atrasado y quién apenas empieza.',

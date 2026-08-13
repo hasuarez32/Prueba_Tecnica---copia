@@ -287,7 +287,70 @@ describe('Semanal', () => {
   })
 })
 
+describe('Resumen — estado de cada programa (§2)', () => {
+  /**
+   * El enunciado pide «identificar cuáles se encuentran en ejecución». El dato
+   * se calculaba desde el principio, pero sólo se veía como un contador: había
+   * que deducir a ojo qué programa estaba en qué estado.
+   */
+  it('dice el estado de cada programa con todas las letras', async () => {
+    await montar()
+    const tabla = await screen.findByRole('table', { name: /Estado de cada programa/i })
+    const filas = within(tabla).getAllByRole('row').slice(1)
+    expect(filas).toHaveLength(8)
+
+    const estadoDe = (programa: string) => {
+      const f = filas.find((x) => x.textContent?.includes(programa))!
+      return within(f).getAllByRole('cell')[1].textContent
+    }
+    // Al corte del 11/08: Bootcamp cerró el 01/08 y Project el 05/08.
+    expect(estadoDe('Bootcamp')).toBe('Finalizado')
+    expect(estadoDe('Gerencia Proyectos')).toBe('Finalizado')
+    expect(estadoDe('Cuidado de Heridas')).toBe('En ejecución')
+    expect(estadoDe('Odontología')).toBe('En ejecución')
+
+    // Seis en ejecución, dos finalizados: cuadra con el KPI.
+    const activos = filas.filter((f) => f.textContent?.includes('En ejecución'))
+    expect(activos).toHaveLength(6)
+    expect(kpi('En ejecución')).toBe('6')
+  })
+
+  it('pone primero los programas activos', async () => {
+    await montar()
+    const tabla = await screen.findByRole('table', { name: /Estado de cada programa/i })
+    const estados = within(tabla).getAllByRole('row').slice(1)
+      .map((f) => within(f).getAllByRole('cell')[1].textContent)
+    const orden = { 'En ejecución': 0, 'Por iniciar': 1, 'Finalizado': 2 } as Record<string, number>
+    const pesos = estados.map((e) => orden[e ?? ''])
+    expect([...pesos].sort((a, b) => a - b)).toEqual(pesos)
+  })
+
+  it('el estado cambia con la fecha de corte', async () => {
+    await montar()
+    const leerEstados = () => {
+      const tabla = screen.getByRole('table', { name: /Estado de cada programa/i })
+      return within(tabla).getAllByRole('row').slice(1)
+        .map((f) => within(f).getAllByRole('cell')[1].textContent)
+    }
+
+    // Antes de que arranque ninguno: todos por iniciar.
+    fireEvent.change(screen.getByLabelText('Fecha de corte'), { target: { value: '2026-07-01' } })
+    await waitFor(() => expect(leerEstados().every((e) => e === 'Por iniciar')).toBe(true))
+
+    // Después de que cierre el último: todos finalizados.
+    fireEvent.change(screen.getByLabelText('Fecha de corte'), { target: { value: '2027-01-01' } })
+    await waitFor(() => expect(leerEstados().every((e) => e === 'Finalizado')).toBe(true))
+  })
+
+  it('el subtítulo del KPI desglosa los que no están activos', async () => {
+    await montar()
+    const caja = screen.getAllByText('En ejecución')[0].closest('.kpi')!
+    expect(caja.querySelector('.kpi-sub')?.textContent).toContain('2 finalizados')
+  })
+})
+
 describe('Semanal — programa en ejecución vs. con clase (§5)', () => {
+
   /**
    * El enunciado pide diferenciar los dos conceptos: un programa puede estar
    * activo según su cronograma y aun así no tener clase la semana elegida.

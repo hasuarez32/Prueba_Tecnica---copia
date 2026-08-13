@@ -313,6 +313,13 @@
     background: var(--pill-fut-bg);
     color: var(--pill-fut-fg);
   }
+  /* Programa cerrado: sin relleno, para que no compita con los activos. */
+  .pill-fin {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--line-2);
+    padding: 2px 10px;
+  }
 
   .th {
     text-align: left;

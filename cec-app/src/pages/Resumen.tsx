@@ -5,11 +5,14 @@
 
 import { useMemo, useState } from 'react'
 import { useApp } from '../store/AppStore'
-import { Card, Donut, Kpi, Leyenda, PageHead, Campo, EstadoVacio } from '../components/ui'
+import {
+  Card, Donut, Kpi, Leyenda, PageHead, Campo, EstadoVacio, PillPrograma, PillEstado,
+} from '../components/ui'
 import { GraficoProgramas, type FilaPrograma } from '../components/GraficoProgramas'
 import { pct, numero, rangoSemana, fechaDiaMes } from '../lib/format'
+import type { EstadoPrograma } from '../lib/etl/types'
 import { lunesDe, sumarDias } from '../lib/etl/derive'
-import { exportarExcel } from '../lib/exporters'
+import { exportarExcel, exportarCSV } from '../lib/exporters'
 import { Link } from 'react-router-dom'
 
 export function Resumen() {
@@ -48,6 +51,30 @@ export function Resumen() {
       enRiesgo,
     }
   }, [sesionesFiltradas, derivada.programas, derivada.participantes, programa])
+
+  /**
+   * Los programas del alcance actual, con su estado frente a la fecha de corte.
+   * Se ordenan por estado —primero los activos, que son los que hay que
+   * atender— y dentro de cada grupo por fecha de inicio.
+   */
+  const programas = useMemo(() => {
+    const ids = new Set(sesionesFiltradas.map((s) => s.programa_id))
+    const orden: Record<EstadoPrograma, number> = {
+      'En ejecución': 0, 'Por iniciar': 1, 'Finalizado': 2,
+    }
+    return derivada.programas
+      .filter((p) => ids.has(p.programa_id))
+      .slice()
+      .sort((a, b) =>
+        orden[a.estado_programa] - orden[b.estado_programa] ||
+        (a.fecha_inicio ?? '').localeCompare(b.fecha_inicio ?? ''))
+  }, [derivada.programas, sesionesFiltradas])
+
+  const porEstado = useMemo(() => ({
+    'En ejecución': programas.filter((p) => p.estado_programa === 'En ejecución').length,
+    'Por iniciar': programas.filter((p) => p.estado_programa === 'Por iniciar').length,
+    'Finalizado': programas.filter((p) => p.estado_programa === 'Finalizado').length,
+  }), [programas])
 
   /** Una barra por programa, ordenadas de más a menos sesiones. */
   const barras = useMemo<FilaPrograma[]>(() => {
@@ -119,8 +146,11 @@ export function Resumen() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <Kpi
           etiqueta="En ejecución"
-          valor={numero(vista.enEjecucion)}
-          sub={`de ${vista.nProgramas} programa${vista.nProgramas === 1 ? '' : 's'}`}
+          valor={numero(porEstado['En ejecución'])}
+          sub={[
+            porEstado['Por iniciar'] ? `${porEstado['Por iniciar']} por iniciar` : '',
+            porEstado['Finalizado'] ? `${porEstado['Finalizado']} finalizado${porEstado['Finalizado'] === 1 ? '' : 's'}` : '',
+          ].filter(Boolean).join(' · ') || `de ${vista.nProgramas} programas`}
         />
         <Kpi
           etiqueta="Cumplimiento"
@@ -173,6 +203,92 @@ export function Resumen() {
           </p>
         </Card>
       </div>
+
+      <Card
+        titulo="Programas"
+        hint="En qué punto está cada uno según su cronograma y la fecha de corte"
+        className="mt-5"
+        acciones={
+          <button
+            className="btn btn-outline"
+            disabled={programas.length === 0}
+            onClick={() => exportarCSV(
+              programas.map((p) => ({
+                programa: p.programa, estado: p.estado_programa,
+                fecha_inicio: p.fecha_inicio, fecha_fin: p.fecha_fin,
+                n_sesiones: p.n_sesiones, n_sesiones_tabuladas: p.n_sesiones_tabuladas,
+                n_sesiones_pendientes: p.n_sesiones_pendientes,
+                pct_cumplimiento: p.pct_cumplimiento_tabulacion,
+                coordinador: p.coordinador,
+              })),
+              ['programa', 'estado', 'fecha_inicio', 'fecha_fin', 'n_sesiones',
+                'n_sesiones_tabuladas', 'n_sesiones_pendientes', 'pct_cumplimiento',
+                'coordinador'],
+              `programas_${fechaCorte}.csv`,
+            )}
+          >
+            Exportar
+          </button>
+        }
+      >
+        {programas.length === 0 ? (
+          <p className="card-hint">No hay programas con los filtros elegidos.</p>
+        ) : (
+          <div className="scroll-x">
+            <table>
+              <caption className="sr-only">
+                Estado de cada programa al corte del {fechaDiaMes(fechaCorte)}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" className="th">Programa</th>
+                  <th scope="col" className="th">Estado</th>
+                  <th scope="col" className="th">Periodo</th>
+                  <th scope="col" className="th text-center">Sesiones</th>
+                  <th scope="col" className="th">Tabulación</th>
+                  <th scope="col" className="th text-right">Cumplim.</th>
+                  <th scope="col" className="th">Coordinación</th>
+                </tr>
+              </thead>
+              <tbody>
+                {programas.map((p) => (
+                  <tr key={p.programa_id}>
+                    <td className="td">
+                      <span className="block font-medium text-heading">{p.programa}</span>
+                      <span className="block text-[11.5px] text-muted truncate max-w-[220px]">
+                        {p.nombre_oficial || '—'}
+                      </span>
+                    </td>
+                    <td className="td"><PillPrograma estado={p.estado_programa} /></td>
+                    <td className="td whitespace-nowrap font-mono text-[12.5px]">
+                      {p.fecha_inicio ? fechaDiaMes(p.fecha_inicio) : '—'}
+                      <span className="text-muted"> – </span>
+                      {p.fecha_fin ? fechaDiaMes(p.fecha_fin) : '—'}
+                    </td>
+                    <td className="td text-center">{p.n_sesiones}</td>
+                    <td className="td whitespace-nowrap">
+                      {p.n_sesiones_pendientes > 0
+                        ? <PillEstado estado="Pendiente de tabular" />
+                        : p.n_sesiones_realizadas > 0
+                          ? <PillEstado estado="Tabulada" />
+                          : <span className="text-muted text-[12.5px]">sin dictar</span>}
+                    </td>
+                    <td className="td text-right font-display font-bold">
+                      {pct(p.pct_cumplimiento_tabulacion, 0)}
+                    </td>
+                    <td className="td text-[12.5px]">{p.coordinador || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="card-hint mt-3">
+          «En ejecución» significa que la fecha de corte cae entre la primera y la última
+          sesión del cronograma. Cambiar el corte cambia el estado: un programa que hoy
+          está activo aparecerá como finalizado si mueves la fecha más allá de su cierre.
+        </p>
+      </Card>
 
       <p className="sr-only" role="status">
         {`Cumplimiento ${pct(vista.cumplimiento)}, ${vista.pen} sesiones pendientes de tabular,`}

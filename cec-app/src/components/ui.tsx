@@ -4,7 +4,7 @@
  */
 
 import type { ReactNode } from 'react'
-import type { EstadoSeguimiento } from '../lib/etl/types'
+import type { EstadoSeguimiento, EstadoPrograma } from '../lib/etl/types'
 
 /* ─────────────────────────────── tarjetas ─────────────────────────────── */
 
@@ -73,6 +73,18 @@ export function PillEstado({ estado }: { estado: EstadoSeguimiento }) {
       {CORTO_ESTADO[estado]}
     </span>
   )
+}
+
+/**
+ * Dónde está el programa en su ciclo de vida, frente a la fecha de corte.
+ * Es la respuesta a «¿qué programas están en ejecución?», que hasta ahora sólo
+ * se podía deducir del contador del resumen.
+ */
+export function PillPrograma({ estado }: { estado: EstadoPrograma }) {
+  const clase = estado === 'En ejecución'
+    ? 'pill-tab'
+    : estado === 'Finalizado' ? 'pill-fin' : 'pill-fut'
+  return <span className={`pill ${clase}`}>{estado}</span>
 }
 
 export function Pill({

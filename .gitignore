@@ -28,8 +28,10 @@ datos_prueba/
 # Modelo de Power BI: lleva los datos incrustados.
 *.pbix
 
-# Documentos de trabajo
+# Documentos de trabajo y presentaciones de la entrega
 *.docx
+*.pptx
+*.ppt
 ~$*
 
 # ─────────────────────────────────────────────────────────────────────────────

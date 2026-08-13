@@ -17,7 +17,7 @@ Para cualquier fecha de corte, responde las preguntas del equipo logístico:
 
 | Pregunta | Dónde |
 |---|---|
-| ¿Qué programas están en ejecución y cómo van? | **Resumen** |
+| ¿Qué programas están en ejecución, cuáles ya cerraron y cuáles no han empezado? | **Resumen** |
 | ¿Qué programas están activos esta semana y cuáles tienen clase? | **Semanal** |
 | ¿Cuántas sesiones hay que atender cada día? | **Semanal** |
 | ¿Qué sesiones ya se dictaron y siguen sin tabular? | **Control de tabulación** |
@@ -46,7 +46,7 @@ Otros comandos:
 ```bash
 npm run build        # compila a dist/ (typecheck + bundle)
 npm run preview      # sirve dist/ para revisar el build
-npm test             # 88 pruebas: ETL contra los Excel reales + interfaz
+npm test             # 92 pruebas: ETL contra los Excel reales + interfaz
 npm run seed         # regenera public/data/seed.json desde las 8 carpetas
 npm run typecheck    # sólo TypeScript
 ```
@@ -372,7 +372,7 @@ campo al modelo es añadir una línea ahí.
 
 ## Verificación
 
-`npm test` corre 88 pruebas. Las del ETL leen **los Excel reales** de las 8
+`npm test` corre 92 pruebas. Las del ETL leen **los Excel reales** de las 8
 carpetas y comparan contra `base_consolidada.xlsx`; las de interfaz montan la
 app y leen los números **de la pantalla**.
 
