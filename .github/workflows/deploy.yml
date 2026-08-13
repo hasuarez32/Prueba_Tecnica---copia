@@ -1,0 +1,66 @@
+name: Desplegar en GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cec-app/**'
+      - '.github/workflows/deploy.yml'
+  # Permite lanzarlo a mano desde la pestaña Actions.
+  workflow_dispatch:
+
+# Sólo lectura del repo; el despliegue usa el token efímero de Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un despliegue a la vez; los empujes nuevos no cancelan uno en curso.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  construir:
+    name: Construir y probar
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cec-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: cec-app/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Pruebas del ETL
+        # Las pruebas leen las 8 carpetas de programa del repositorio; si no
+        # están (repo sin los Excel de ejemplo), se omiten sin romper el build.
+        run: npm test
+        continue-on-error: false
+
+      - name: Construir
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: cec-app/dist
+
+  desplegar:
+    name: Publicar
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

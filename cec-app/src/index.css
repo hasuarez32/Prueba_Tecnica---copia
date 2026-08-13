@@ -1,0 +1,352 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Tokens de diseño (§3 de ESPECIFICACION_APP_WEB.md).
+   El tema claro es el de los mockups; el oscuro reasigna los mismos tokens.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --navy: #0e1b3a;
+  --navy-2: #16244a;
+  --ink: #0b1330;
+  --pink: #ff3d8b;
+  --pink-soft: #ffd6e5;
+  --pink-ink: #c31a62;
+  --cyan: #3fcfcf;
+  --cyan-soft: #cdefef;
+  --cyan-ink: #127a7a;
+  --mint: #e6f4f4;
+  --cream: #f7f4ec;
+  --muted: #5c6a8a;
+  --green: #2fa36b;
+  --green-soft: #dff2e8;
+  --green-ink: #1b7a4e;
+  --gray: #c7cedd;
+  --line: rgba(14, 27, 58, 0.1);
+  --line-2: rgba(14, 27, 58, 0.18);
+
+  /* semánticos */
+  --bg: var(--cream);
+  --bg-glow: rgba(63, 207, 207, 0.16);
+  --card: #ffffff;
+  --card-2: #fbfaf6;
+  --heading: var(--navy);
+  --body: var(--ink);
+  --accent-solid: var(--navy);
+  --accent-on: #ffffff;
+  --nav-bg: rgba(247, 244, 236, 0.82);
+  --pill-tab-bg: #d7f3f3;
+  --pill-tab-fg: #0f6a6a;
+  --pill-pend-bg: #ffe1ec;
+  --pill-pend-fg: #b01556;
+  --pill-fut-bg: #ebeef4;
+  --pill-fut-fg: #4d5a78;
+  --ring: rgba(63, 207, 207, 0.55);
+}
+
+.dark {
+  --navy: #16244a;
+  --navy-2: #1d2f5e;
+  --ink: #e8ecf6;
+  --pink: #ff6ba5;
+  --pink-soft: #4a1830;
+  --pink-ink: #ffb3ce;
+  --cyan: #4fd8d8;
+  --cyan-soft: #123f42;
+  --cyan-ink: #7fe6e6;
+  --mint: #10303a;
+  --cream: #080f24;
+  --muted: #9aa7c4;
+  --green: #46c489;
+  --green-soft: #10331f;
+  --green-ink: #7fdcae;
+  --gray: #55607d;
+  --line: rgba(255, 255, 255, 0.1);
+  --line-2: rgba(255, 255, 255, 0.2);
+
+  --bg: #080f24;
+  --bg-glow: rgba(63, 207, 207, 0.1);
+  --card: #101b3b;
+  --card-2: #16244a;
+  --heading: #f2f5fd;
+  --body: #e8ecf6;
+  --accent-solid: #4fd8d8;
+  --accent-on: #05202a;
+  --nav-bg: rgba(8, 15, 36, 0.82);
+  --pill-tab-bg: #10403f;
+  --pill-tab-fg: #7fe6e6;
+  --pill-pend-bg: #4a1830;
+  --pill-pend-fg: #ffb3ce;
+  --pill-fut-bg: #1b2647;
+  --pill-fut-fg: #b3bed8;
+  --ring: rgba(79, 216, 216, 0.7);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Geist, ui-sans-serif, system-ui, sans-serif;
+    color: var(--body);
+    background:
+      radial-gradient(90% 60% at 100% 0%, var(--bg-glow), transparent 55%),
+      var(--bg);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Foco visible y consistente en todo lo interactivo (accesibilidad). */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 999px;
+  }
+
+  ::selection {
+    background: var(--cyan);
+    color: #04222a;
+  }
+
+  h1,
+  h2,
+  h3 {
+    color: var(--heading);
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+}
+
+@layer components {
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  @media (min-width: 720px) {
+    .wrap {
+      padding: 0 28px;
+    }
+  }
+
+  .display {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 0.98;
+  }
+
+  .serif-it {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  .eyebrow {
+    font-family: 'Geist Mono', monospace;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    padding: 20px 18px;
+  }
+  @media (min-width: 720px) {
+    .card {
+      padding: 22px 24px;
+    }
+  }
+
+  .card-title {
+    margin: 0;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: -0.01em;
+    color: var(--heading);
+  }
+
+  .card-hint {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 13.5px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+    transition: filter 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+  }
+  .btn:hover:not(:disabled) {
+    filter: brightness(1.06);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-navy {
+    background: var(--accent-solid);
+    color: var(--accent-on);
+  }
+  .btn-outline {
+    border-color: var(--line-2);
+    color: var(--heading);
+    background: var(--card);
+  }
+  .btn-pink {
+    background: var(--pink);
+    color: #fff;
+  }
+  .dark .btn-pink {
+    color: #2a0a17;
+  }
+
+  .control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 14px;
+    background: var(--card);
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--heading);
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .field-label {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: 'Geist Mono', monospace;
+  }
+
+  .kpi {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 16px 18px;
+  }
+  .kpi-lab {
+    font-size: 11.5px;
+    color: var(--muted);
+    font-family: 'Geist Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .kpi-num {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--heading);
+    line-height: 1;
+    margin-top: 10px;
+    font-size: clamp(30px, 6vw, 42px);
+  }
+  .kpi-sub {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 3px 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .pill-tab {
+    background: var(--pill-tab-bg);
+    color: var(--pill-tab-fg);
+  }
+  .pill-pend {
+    background: var(--pill-pend-bg);
+    color: var(--pill-pend-fg);
+  }
+  .pill-fut {
+    background: var(--pill-fut-bg);
+    color: var(--pill-fut-fg);
+  }
+
+  .th {
+    text-align: left;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .td {
+    padding: 11px 10px;
+    font-size: 13.5px;
+    border-bottom: 1px solid var(--line);
+    color: var(--body);
+  }
+
+  .scroll-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+    background: var(--accent-solid);
+    color: var(--accent-on);
+    padding: 10px 18px;
+    border-radius: 0 0 12px 0;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .skip-link:focus {
+    left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
