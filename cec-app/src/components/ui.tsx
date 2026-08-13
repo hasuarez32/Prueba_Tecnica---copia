@@ -187,7 +187,11 @@ export function PageHead({
           <span className="serif-it" style={{ color: acentoColor }}>{acento}</span>
         </h1>
       </div>
-      {children && <div className="flex flex-wrap gap-2.5">{children}</div>}
+      {children && (
+        <div className="flex flex-wrap gap-2.5 w-full sm:w-auto [&>*]:flex-1 [&>*]:min-w-[142px] sm:[&>*]:flex-none sm:[&>*]:min-w-0">
+          {children}
+        </div>
+      )}
     </div>
   )
 }

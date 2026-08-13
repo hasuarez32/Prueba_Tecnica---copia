@@ -104,8 +104,8 @@ export function SelectorBuscable({
     <div className="relative" ref={contenedor}>
       <button
         type="button"
-        className="control justify-between w-full"
-        style={{ width: ancho }}
+        className="control justify-between"
+        style={{ width: ancho, maxWidth: '100%' }}
         onClick={() => setAbierto((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={abierto}
@@ -122,6 +122,9 @@ export function SelectorBuscable({
           style={{
             background: 'var(--card)',
             width: Math.max(ancho, 240),
+            // Nunca más ancho que la pantalla: en móvil el desplegable se
+            // saldría del viewport y obligaría a hacer scroll horizontal.
+            maxWidth: 'calc(100vw - 32px)',
             boxShadow: '0 12px 32px rgba(11,19,48,.14)',
           }}
         >

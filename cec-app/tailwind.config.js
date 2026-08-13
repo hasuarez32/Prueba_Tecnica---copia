@@ -4,6 +4,7 @@ export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      screens: { xs: '475px' },
       // Los colores apuntan a variables CSS (src/index.css) para que el tema
       // claro/oscuro cambie sin duplicar clases.
       colors: {

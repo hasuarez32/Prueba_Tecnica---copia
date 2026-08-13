@@ -28,9 +28,12 @@ export function NavBar() {
       className="sticky top-0 z-30 border-b border-line"
       style={{ background: 'var(--nav-bg)', backdropFilter: 'blur(14px)' }}
     >
-      <div className="wrap flex items-center justify-between gap-3 h-[64px] sm:h-[68px]">
+      {/* En móvil la barra se parte en dos filas: marca + controles arriba, y el
+          menú deslizable abajo. Sin `flex-wrap` el menú no podría bajar y los
+          tres bloques se aplastarían en la misma línea. */}
+      <div className="wrap flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-3 gap-y-1 py-2 sm:py-0 sm:h-[68px]">
         <button
-          className="flex items-center gap-2.5 font-display font-bold text-[18px] sm:text-[20px] tracking-[-0.02em] text-heading bg-transparent border-0 cursor-pointer p-0"
+          className="order-1 flex items-center gap-2.5 font-display font-bold text-[17px] sm:text-[20px] tracking-[-0.02em] text-heading bg-transparent border-0 cursor-pointer p-0"
           onClick={() => navegar('/')}
           aria-label="Ir al resumen"
         >
@@ -49,12 +52,12 @@ export function NavBar() {
               style={{ background: 'var(--pink)' }}
             />
           </span>
-          <span className="hidden xs:inline sm:inline">CEC · Operación</span>
+          <span className="hidden xs:inline">CEC · Operación</span>
         </button>
 
         <nav
           aria-label="Secciones"
-          className="scroll-x order-3 w-full sm:order-none sm:w-auto pb-2 sm:pb-0"
+          className="scroll-x order-3 w-full sm:order-2 sm:w-auto pb-1 sm:pb-0 -mx-5 px-5 sm:mx-0 sm:px-0"
         >
           <div
             className="flex gap-1 p-[5px] rounded-pill border border-line w-max mx-auto"
@@ -82,16 +85,16 @@ export function NavBar() {
           </div>
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="order-2 sm:order-3 flex items-center gap-1.5 sm:gap-2 shrink-0">
           <label className="sr-only" htmlFor="corte-global">Fecha de corte</label>
-          <div className="control gap-2 px-3" title={`Fecha de corte: ${fechaLarga(fechaCorte)}`}>
+          <div className="control gap-1.5 px-2.5 sm:px-3" title={`Fecha de corte: ${fechaLarga(fechaCorte)}`}>
             <span style={{ color: 'var(--pink)' }} aria-hidden>◗</span>
             <input
               id="corte-global"
               type="date"
               value={fechaCorte}
               onChange={(e) => e.target.value && setFechaCorte(e.target.value)}
-              className="bg-transparent border-0 text-inherit font-medium text-[13.5px] outline-none w-[122px] cursor-pointer"
+              className="bg-transparent border-0 text-inherit font-medium text-[12.5px] sm:text-[13.5px] outline-none w-[104px] sm:w-[122px] cursor-pointer"
               style={{ colorScheme: tema === 'oscuro' ? 'dark' : 'light' }}
             />
           </div>

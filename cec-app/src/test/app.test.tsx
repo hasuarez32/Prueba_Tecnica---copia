@@ -431,7 +431,55 @@ describe('Cursos — validación de la carga', () => {
   })
 })
 
+describe('responsive', () => {
+  /**
+   * jsdom no calcula layout, así que no puede medir desbordes. Pero sí puede
+   * verificar la causa estructural más común: una tabla ancha suelta en el
+   * flujo de la página, sin un contenedor que haga scroll por su cuenta. Eso
+   * es lo que obliga a la página entera a desplazarse en horizontal.
+   */
+  it('toda tabla vive dentro de un contenedor con scroll propio', async () => {
+    await montar()
+    for (const pagina of ['Resumen', 'Semanal', 'Tabulación', 'Académico', 'Guía'] as const) {
+      await irA(pagina)
+      await new Promise((r) => setTimeout(r, 60))
+      const tablas = document.querySelectorAll('main table')
+      expect(tablas.length, `${pagina} no renderizó tablas`).toBeGreaterThan(0)
+      for (const t of tablas) {
+        // Las tablas puramente textuales para lectores de pantalla no cuentan.
+        if (t.classList.contains('sr-only')) continue
+        expect(
+          t.closest('.scroll-x'),
+          `${pagina}: hay una tabla fuera de un contenedor .scroll-x`,
+        ).not.toBeNull()
+      }
+    }
+  })
+
+  it('la navegación deja bajar el menú a una segunda fila', async () => {
+    await montar()
+    const nav = screen.getByRole('navigation', { name: 'Secciones' })
+    // El menú ocupa el ancho completo en móvil; su contenedor debe permitir
+    // el salto de línea, o los tres bloques se aplastan en la misma fila.
+    expect(nav.className).toMatch(/w-full/)
+    expect(nav.parentElement?.className).toMatch(/flex-wrap/)
+    // Y se desplaza en horizontal en vez de recortarse.
+    expect(nav.className).toMatch(/scroll-x/)
+  })
+
+  it('ningún control del encabezado tiene ancho fijo que desborde', async () => {
+    await montar()
+    await irA('Semanal')
+    await screen.findByText('Carga por día')
+    for (const nombre of ['Elegir semana', 'Filtrar por programa']) {
+      const boton = screen.getByRole('button', { name: nombre })
+      expect(boton.style.maxWidth, `${nombre} puede desbordar su contenedor`).toBe('100%')
+    }
+  })
+})
+
 describe('accesibilidad y navegación', () => {
+
   it('navega entre las seis páginas', async () => {
     await montar()
     for (const [pagina, marca] of [

@@ -54,11 +54,11 @@ export function Guia() {
         titulo="Guía de"
         acento="datos"
       >
-        <label className="flex flex-col gap-1.5">
+        <label className="flex flex-col gap-1.5 w-full sm:w-auto">
           <span className="field-label">Buscar variable</span>
           <input
             type="search"
-            className="control w-[220px]"
+            className="control w-full sm:w-[220px]"
             placeholder="tabulada, tope, jornada…"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
