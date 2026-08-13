@@ -149,6 +149,58 @@ export function upsertCurso(base: BaseConsolidada, curso: CursoImportado): BaseC
   return { version: 1, generado_en: new Date().toISOString(), cursos }
 }
 
+/**
+ * Deduplica cursos por `programa_id`.
+ *
+ * La estructura del CEC organiza las carpetas por mes y, dentro de cada mes,
+ * por los **programas vigentes**: un diplomado de julio a septiembre aparece en
+ * las tres carpetas. Sin deduplicar, sus sesiones y participantes se contarían
+ * una vez por mes.
+ *
+ * De las copias se conserva la que tenga más sesiones tabuladas —la asistencia
+ * más al día, que suele ser la del mes más reciente—; a igualdad, la que traiga
+ * más sesiones. Las descartadas se reportan para que no desaparezcan en silencio.
+ */
+export function consolidarCursos(cursos: CursoImportado[]): {
+  cursos: CursoImportado[]
+  duplicados: Array<{ programa_id: string; programa: string; conservado: string; descartados: string[] }>
+} {
+  const porId = new Map<string, CursoImportado[]>()
+  for (const c of cursos) {
+    const lista = porId.get(c.programa.programa_id)
+    if (lista) lista.push(c)
+    else porId.set(c.programa.programa_id, [c])
+  }
+
+  const salida: CursoImportado[] = []
+  const duplicados: Array<{ programa_id: string; programa: string; conservado: string; descartados: string[] }> = []
+
+  for (const [id, copias] of porId) {
+    if (copias.length === 1) {
+      salida.push(copias[0])
+      continue
+    }
+    const ordenadas = [...copias].sort((a, b) => {
+      const ta = a.sesiones.filter((s) => s.tabulada).length
+      const tb = b.sesiones.filter((s) => s.tabulada).length
+      if (ta !== tb) return tb - ta
+      if (a.sesiones.length !== b.sesiones.length) return b.sesiones.length - a.sesiones.length
+      return a.programa.origen.localeCompare(b.programa.origen)
+    })
+    const elegida = ordenadas[0]
+    salida.push(elegida)
+    duplicados.push({
+      programa_id: id,
+      programa: elegida.programa.programa,
+      conservado: elegida.programa.origen,
+      descartados: ordenadas.slice(1).map((c) => c.programa.origen),
+    })
+  }
+
+  salida.sort((a, b) => a.programa.programa.localeCompare(b.programa.programa))
+  return { cursos: salida, duplicados }
+}
+
 export function quitarCurso(base: BaseConsolidada, programaId: string): BaseConsolidada {
   return {
     version: 1,

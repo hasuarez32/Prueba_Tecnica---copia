@@ -16,7 +16,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { importarArchivos, type ArchivoEntrada } from '../src/lib/etl/index'
+import { importarArchivos, consolidarCursos, type ArchivoEntrada } from '../src/lib/etl/index'
 import { derivar } from '../src/lib/etl/derive'
 import type { BaseConsolidada, CursoImportado } from '../src/lib/etl/types'
 import { anonimizar } from './anonimizar'
@@ -69,14 +69,21 @@ for (const { nombre, dir, relativa } of encontradas) {
   if (nErr && r.curso) errores++
 }
 
-cursos.sort((a, b) => a.programa.programa.localeCompare(b.programa.programa))
+// Un programa vigente varios meses aparece en la carpeta de cada mes.
+const { cursos: unicos, duplicados } = consolidarCursos(cursos)
+if (duplicados.length) {
+  console.log('\nProgramas encontrados en más de una carpeta:')
+  for (const d of duplicados) {
+    console.log(`  ${d.programa}: se conserva la copia más al día y se descartan ${d.descartados.length}.`)
+  }
+}
 
 let base: BaseConsolidada = {
   version: 1,
   // Fijo y determinista: así el JSON no cambia entre corridas y el diff de git
   // sólo se mueve cuando cambian los datos de verdad.
   generado_en: `${CORTE_REF}T00:00:00.000Z`,
-  cursos: cursos.map((c) => ({ ...c, importado_en: `${CORTE_REF}T00:00:00.000Z` })),
+  cursos: unicos.map((c) => ({ ...c, importado_en: `${CORTE_REF}T00:00:00.000Z` })),
 }
 
 if (ANONIMO) {

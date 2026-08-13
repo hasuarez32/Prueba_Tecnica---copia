@@ -10,7 +10,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { importarArchivos, type ArchivoEntrada } from './index'
+import { importarArchivos, consolidarCursos, type ArchivoEntrada } from './index'
 import { derivar, semanaISO, lunesDe, diasEntre, estadoSeguimiento } from './derive'
 import {
   parseFecha, parseHora, parseNum, limpiarDocumento, normalizarModalidad, norm, mesANumero,
@@ -279,7 +279,51 @@ conExcel('importación de las 8 carpetas de ejemplo', () => {
   })
 })
 
+conExcel('un programa vigente en varios meses (§2)', () => {
+  /**
+   * La estructura del CEC agrupa por mes y, dentro de cada mes, por los
+   * programas vigentes: un diplomado de julio a septiembre aparece en las tres
+   * carpetas. Sin deduplicar, sus sesiones se contarían una vez por mes.
+   */
+  it('deduplica las copias y conserva la asistencia más al día', () => {
+    const heridas = baseCompleta().cursos.find((c) => c.programa.programa_id === 'HERIDAS')!
+
+    // Tres copias del mismo programa, como saldrían de tres carpetas de mes.
+    // A la de «julio» se le quita la tabulación para simular una versión vieja.
+    const julio = {
+      ...heridas,
+      programa: { ...heridas.programa, origen: 'JULIO 2026' },
+      sesiones: heridas.sesiones.map((s) => ({ ...s, tabulada: false })),
+    }
+    const agosto = { ...heridas, programa: { ...heridas.programa, origen: 'AGOSTO 2026' } }
+    const septiembre = { ...heridas, programa: { ...heridas.programa, origen: 'SEPTIEMBRE 2026' } }
+
+    const { cursos, duplicados } = consolidarCursos([julio, agosto, septiembre])
+
+    expect(cursos).toHaveLength(1)
+    expect(cursos[0].sesiones).toHaveLength(37)
+    expect(cursos[0].participantes).toHaveLength(35)
+    // Se queda con una copia tabulada, no con la desactualizada de julio.
+    expect(cursos[0].sesiones.filter((s) => s.tabulada)).toHaveLength(11)
+    expect(cursos[0].programa.origen).not.toBe('JULIO 2026')
+
+    // Y las descartadas quedan reportadas, no desaparecen en silencio.
+    expect(duplicados).toHaveLength(1)
+    expect(duplicados[0].programa_id).toBe('HERIDAS')
+    expect(duplicados[0].descartados).toHaveLength(2)
+  })
+
+  it('no toca los programas que aparecen una sola vez', () => {
+    const base = baseCompleta()
+    const { cursos, duplicados } = consolidarCursos(base.cursos)
+    expect(cursos).toHaveLength(8)
+    expect(duplicados).toHaveLength(0)
+    expect(derivar({ ...base, cursos }, CORTE).totales.n_sesiones).toBe(130)
+  })
+})
+
 conExcel('la fecha de corte recalcula los estados', () => {
+
   it('mueve sesiones entre futuras y pendientes sin tocar las tabuladas', () => {
     const base = baseCompleta()
     const temprano = derivar(base, '2026-07-01')

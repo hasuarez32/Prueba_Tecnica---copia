@@ -1454,12 +1454,16 @@ def main(argv=None):
     print("Programas detectados: %d" % len(programas))
     print("-" * 78)
 
-    resultados, orden = {}, []
+    resultados, orden, nombres_carpeta = {}, [], {}
     for carpeta, ruta_clases in programas:
-        orden.append(carpeta)
+        # La clave es la ruta, no el nombre: con la estructura por mes hay
+        # varias carpetas «Heridas» y por nombre se pisarían entre sí.
+        clave = ruta_clases
+        orden.append(clave)
+        nombres_carpeta[clave] = carpeta
         try:
             r = procesar_programa(carpeta, ruta_clases, fecha_corte)
-            resultados[carpeta] = r
+            resultados[clave] = r
             print("  [OK]    %-32s %3d sesiones, %3d participantes"
                   % (r["programa"][:32], len(r["sesiones"]), len(r["participantes"])))
         except Exception as exc:      # §9: un programa con problemas no aborta todo
@@ -1468,6 +1472,34 @@ def main(argv=None):
                     % (type(exc).__name__, exc), "ERROR")
             print("  [FALLA] %-32s %s: %s" % (carpeta[:32], type(exc).__name__, exc))
             traceback.print_exc(file=sys.stdout)
+
+    # ---------------- deduplicar programas vigentes en varios meses
+    # La estructura del CEC agrupa por mes y, dentro de cada mes, por los
+    # programas vigentes: un diplomado de julio a septiembre aparece en las tres
+    # carpetas. Se conserva la copia con más sesiones tabuladas (la asistencia
+    # más al día) y se reportan las descartadas.
+    por_id = {}
+    for carpeta in orden:
+        r = resultados.get(carpeta)
+        if r:
+            por_id.setdefault(r["programa_id"], []).append(carpeta)
+    for programa_id, carpetas in por_id.items():
+        if len(carpetas) < 2:
+            continue
+        def puntaje(c):
+            r = resultados[c]
+            return (sum(1 for f in r["sesiones"] if f["estado_seguimiento"] == "Tabulada"),
+                    len(r["sesiones"]))
+        mejor = max(carpetas, key=puntaje)
+        descartadas = [c for c in carpetas if c != mejor]
+        INC.add(resultados[mejor]["programa"],
+                "El programa aparece en %d carpetas (%s): se conserva la copia con la "
+                "asistencia más al día y se descartan las demás."
+                % (len(carpetas),
+                   ", ".join(os.path.relpath(c, raiz) for c in descartadas)))
+        for c in descartadas:
+            orden.remove(c)
+            del resultados[c]
 
     # ---------------- ensamblado
     sesiones = [f for c in orden if c in resultados for f in resultados[c]["sesiones"]]

@@ -1,6 +1,6 @@
 # Base consolidada CEC — incidencias de calidad de datos
 
-Generado por `construir_base.py` el 2026-08-12 22:40:35.
+Generado por `construir_base.py` el 2026-08-12 22:59:05.
 
 - **Fecha de corte:** `2026-08-11`
 - **Archivo generado:** `base_consolidada.xlsx`
