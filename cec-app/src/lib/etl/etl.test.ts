@@ -405,6 +405,22 @@ conExcel('validación de archivos inválidos', () => {
     expect(errores[0].donde).toBe('roto.xlsx')
   })
 
+  it('cuenta las imágenes como evidencia en vez de rechazarlas', () => {
+    // Al arrastrar la carpeta completa vienen también las fotos: no son un
+    // error, son el tercer proceso que controla el equipo logístico.
+    const { nombre, dir } = carpetasDePrograma().find((c) => /Bienestar/i.test(c.nombre))!
+    const archivos = [
+      ...leerCarpeta(dir),
+      { nombre: 'IMG_001.jpg', datos: new Uint8Array([1, 2, 3]) },
+      { nombre: 'IMG_002.HEIC', datos: new Uint8Array([1, 2, 3]) },
+    ]
+    const r = importarArchivos(archivos, nombre)
+    expect(r.ok).toBe(true)
+    expect(r.curso!.programa.n_evidencias).toBe(2)
+    // No generan ni un error ni un aviso: son un archivo esperado.
+    expect(r.incidencias.some((i) => /IMG_00/.test(i.mensaje))).toBe(false)
+  })
+
   it('no acepta una lista vacía de archivos', () => {
     const r = importarArchivos([])
     expect(r.ok).toBe(false)

@@ -508,9 +508,25 @@ describe('Cursos — validación de la carga', () => {
   it('lista los 8 cursos cargados', async () => {
     await montar()
     await irA('Cursos')
-    const tarjeta = (await screen.findByText('Cursos cargados')).closest('.card') as HTMLElement
-    expect(within(tarjeta).getAllByRole('listitem')).toHaveLength(8)
-    expect(within(tarjeta).getByText('· 8')).toBeInTheDocument()
+    const tabla = await screen.findByRole('table', { name: /Cursos cargados/i })
+    expect(within(tabla).getAllByRole('row').slice(1)).toHaveLength(8)
+    expect(screen.getByText('· 8')).toBeInTheDocument()
+  })
+
+  it('muestra el estado de la evidencia fotográfica por programa', async () => {
+    await montar()
+    await irA('Cursos')
+    const tabla = await screen.findByRole('table', { name: /Cursos cargados/i })
+    const fila = (programa: string) =>
+      within(tabla).getAllByRole('row').find((r) => r.textContent?.includes(programa))!
+
+    // Sólo dos programas tienen fotos cargadas.
+    expect(within(fila('Normatividad')).getByText('12 archivos')).toBeInTheDocument()
+    expect(within(fila('Cuidado de Heridas')).getByText('3 archivos')).toBeInTheDocument()
+    expect(within(fila('Bienestar')).getByText('sin cargar')).toBeInTheDocument()
+
+    // Y el total aparece junto a los demás conteos de la base.
+    expect(screen.getByText(/15 evidencias/)).toBeInTheDocument()
   })
 })
 

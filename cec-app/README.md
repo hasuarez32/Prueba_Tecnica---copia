@@ -23,6 +23,7 @@ Para cualquier fecha de corte, responde las preguntas del equipo logístico:
 | ¿Qué sesiones ya se dictaron y siguen sin tabular? | **Control de tabulación** |
 | ¿Quién está por perder el derecho al certificado? | **Detalle académico** |
 | ¿Cómo agrego o actualizo un curso? | **Cursos** |
+| ¿Qué programas ya subieron su evidencia fotográfica? | **Cursos** |
 | ¿Qué significa exactamente este dato? | **Guía** |
 
 La **fecha de corte** es un control global en la barra superior. Al moverla se
@@ -45,7 +46,7 @@ Otros comandos:
 ```bash
 npm run build        # compila a dist/ (typecheck + bundle)
 npm run preview      # sirve dist/ para revisar el build
-npm test             # 66 pruebas: ETL contra los Excel reales + interfaz
+npm test             # 70 pruebas: ETL contra los Excel reales + interfaz
 npm run seed         # regenera public/data/seed.json desde las 8 carpetas
 npm run typecheck    # sólo TypeScript
 ```
@@ -192,6 +193,13 @@ etiqueta**, tomando el valor a la derecha: `NOMBRE DEL CURSO`, `NRC:`,
 `ENTIDAD CONVENIO:`, `MODALIDAD:`, `VALOR DEL PROGRAMA:`,
 `NÚMERO DE PARTICIANTES` (sic).
 
+**`Evidencia Fotográfica`** — carpeta hermana de `Listado de Clases`, opcional.
+Sus imágenes (`.jpg`, `.png`, `.heic`…) se cuentan como evidencia del programa.
+Es el tercer proceso que controla el equipo logístico, junto al cronograma y los
+listados. Se cuenta por programa y no por sesión porque los nombres de archivo
+no dicen a qué clase pertenece cada foto. Al arrastrar la carpeta completa a la
+página Cursos, las imágenes se cuentan solas en vez de dar error.
+
 **`CONSOLIDADO`** — la asistencia real. Estructura:
 
 - Cabecera con `NÚMERO DE HORAS` y `NÚMERO DE HORAS DE FALLAS MÁXIMAS PERMITIDAS`.
@@ -279,7 +287,7 @@ cec-app/
 │  ├─ lib/github.ts       ← commit del JSON vía API
 │  ├─ lib/exporters.ts    ← JSON, Excel y CSV
 │  └─ test/
-│     ├─ app.test.tsx     ← 38 pruebas de interfaz
+│     ├─ app.test.tsx     ← 40 pruebas de interfaz
 │     └─ fixtures/        ← seed de ejemplo fijo, independiente del publicado
 ├─ scripts/
 │  ├─ seed.ts             ← genera public/data/seed.json
@@ -334,7 +342,7 @@ campo al modelo es añadir una línea ahí.
 
 ## Verificación
 
-`npm test` corre 66 pruebas. Las del ETL leen **los Excel reales** de las 8
+`npm test` corre 70 pruebas. Las del ETL leen **los Excel reales** de las 8
 carpetas y comparan contra `base_consolidada.xlsx`; las de interfaz montan la
 app y leen los números **de la pantalla**.
 

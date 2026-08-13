@@ -113,6 +113,13 @@ export interface ProgramaBase {
   horas_falla_max: number | null
   /** Carpeta o archivos de origen, para trazabilidad en la página Cursos. */
   origen: string
+  /**
+   * Archivos de evidencia fotográfica encontrados para el programa.
+   * Es el tercer proceso que controla el equipo logístico, junto al cronograma
+   * y los listados de asistencia. Se cuenta a nivel de programa porque los
+   * nombres de archivo no permiten saber a qué sesión corresponde cada foto.
+   */
+  n_evidencias: number
 }
 
 /** Programa con los agregados calculados contra la fecha de corte. */

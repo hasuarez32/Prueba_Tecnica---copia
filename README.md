@@ -1,6 +1,6 @@
 # Base consolidada CEC — incidencias de calidad de datos
 
-Generado por `construir_base.py` el 2026-08-12 22:59:05.
+Generado por `construir_base.py` el 2026-08-12 23:08:50.
 
 - **Fecha de corte:** `2026-08-11`
 - **Archivo generado:** `base_consolidada.xlsx`
@@ -8,16 +8,16 @@ Generado por `construir_base.py` el 2026-08-12 22:59:05.
 
 ## Resumen por programa
 
-| Programa | Sesiones | Tabuladas | Pendientes | Futuras | Cumplim. | Participantes | Incidencias |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Bienestar y Felicidad | 4 | 3 | 0 | 1 | 100% | 9 | 3 |
-| Bootcamp Analítica Predictiva | 4 | 2 | 2 | 0 | 50% | 5 | 2 |
-| Cuidado de Heridas | 37 | 11 | 5 | 21 | 69% | 35 | 4 |
-| Ecografía Clínica | 22 | 6 | 1 | 15 | 86% | 22 | 3 |
-| Odontología Estética Adhesiva | 17 | 0 | 2 | 15 | 0% | 11 | 7 |
-| Normatividad Inst. Eléctricas | 30 | 10 | 3 | 17 | 77% | 10 | 6 |
-| Gerencia de Proyectos (Project) | 12 | 12 | 0 | 0 | 100% | 8 | 4 |
-| Integración Sensorial | 4 | 0 | 2 | 2 | 0% | 8 | 6 |
+| Programa | Sesiones | Tabuladas | Pendientes | Futuras | Cumplim. | Participantes | Evidencias | Incidencias |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Bienestar y Felicidad | 4 | 3 | 0 | 1 | 100% | 9 | 0 | 4 |
+| Bootcamp Analítica Predictiva | 4 | 2 | 2 | 0 | 50% | 5 | 0 | 3 |
+| Cuidado de Heridas | 37 | 11 | 5 | 21 | 69% | 35 | 3 | 4 |
+| Ecografía Clínica | 22 | 6 | 1 | 15 | 86% | 22 | 0 | 4 |
+| Odontología Estética Adhesiva | 17 | 0 | 2 | 15 | 0% | 11 | 0 | 8 |
+| Normatividad Inst. Eléctricas | 30 | 10 | 3 | 17 | 77% | 10 | 12 | 6 |
+| Gerencia de Proyectos (Project) | 12 | 12 | 0 | 0 | 100% | 8 | 0 | 5 |
+| Integración Sensorial | 4 | 0 | 2 | 2 | 0% | 8 | 0 | 7 |
 
 ## Incidencias detectadas
 
@@ -26,11 +26,13 @@ Generado por `construir_base.py` el 2026-08-12 22:59:05.
 - **AVISO** — Cronograma sin columna 'Nombre del módulo'.
 - **AVISO** — FORMAS DE PAGO sin valor para: experto_facilitador, entidad_convenio, codigo_contable.
 - **AVISO** — NÚMERO DE PARTICIANTES declarado = 5 pero CONSOLIDADO lista 9 participante(s).
+- **AVISO** — Sin evidencia fotográfica pese a tener 3 sesión(es) ya dictada(s).
 
 ### Bootcamp Analítica Predictiva
 
 - **AVISO** — Cronograma sin columna 'Salón': la modalidad se toma de MODALIDAD en FORMAS DE PAGO.
 - **AVISO** — Cronograma sin columna 'Nombre del módulo'.
+- **AVISO** — Sin evidencia fotográfica pese a tener 4 sesión(es) ya dictada(s).
 
 ### Cuidado de Heridas
 
@@ -44,6 +46,7 @@ Generado por `construir_base.py` el 2026-08-12 22:59:05.
 - **AVISO** — FORMAS DE PAGO sin valor para: experto_facilitador, codigo_contable.
 - **AVISO** — 1 sesión(es) con hora_fin fechada en un día distinto al de la sesión: sesión 1 → 2026-07-29.
 - **AVISO** — Suma de intensidad horaria del cronograma (78 h) ≠ NÚMERO DE HORAS del CONSOLIDADO (90 h).
+- **AVISO** — Sin evidencia fotográfica pese a tener 7 sesión(es) ya dictada(s).
 
 ### Odontología Estética Adhesiva
 
@@ -54,6 +57,7 @@ Generado por `construir_base.py` el 2026-08-12 22:59:05.
 - **AVISO** — NÚMERO DE PARTICIANTES declarado = 10 pero CONSOLIDADO lista 11 participante(s).
 - **AVISO** — 1 sesión(es) con hora_fin anterior o igual a hora_inicio (se conservan y quedan marcadas en observaciones): sesión 16 17:00→14:00.
 - **AVISO** — Suma de intensidad horaria del cronograma (74 h) ≠ NÚMERO DE HORAS del CONSOLIDADO (102 h).
+- **AVISO** — Sin evidencia fotográfica pese a tener 2 sesión(es) ya dictada(s).
 
 ### Normatividad Inst. Eléctricas
 
@@ -70,6 +74,7 @@ Generado por `construir_base.py` el 2026-08-12 22:59:05.
 - **AVISO** — FORMAS DE PAGO sin valor para: entidad_convenio, nrc, cod_banner.
 - **AVISO** — 1 sesión(es) con hora_fin fechada en un día distinto al de la sesión: sesión 10 → 2026-07-28.
 - **AVISO** — Suma de intensidad horaria del cronograma (36 h) ≠ NÚMERO DE HORAS del CONSOLIDADO (40 h).
+- **AVISO** — Sin evidencia fotográfica pese a tener 12 sesión(es) ya dictada(s).
 
 ### Integración Sensorial
 
@@ -79,6 +84,7 @@ Generado por `construir_base.py` el 2026-08-12 22:59:05.
 - **AVISO** — CONSOLIDADO: 9 columna(s) de sesión sin fecha reconstruible ('M.', 'T', 'M', 'T', 'M', 'T', 'M', 'T'); esas sesiones quedan sin columna.
 - **AVISO** — NÚMERO DE PARTICIANTES declarado = 6 pero CONSOLIDADO lista 8 participante(s).
 - **AVISO** — 4 sesión(es) del cronograma sin columna en CONSOLIDADO (sesión 1 del 2026-07-31, sesión 2 del 2026-08-01, sesión 3 del 2026-08-14, sesión 4 del 2026-08-15); quedan como no tabuladas.
+- **AVISO** — Sin evidencia fotográfica pese a tener 2 sesión(es) ya dictada(s).
 
 ## Cómo se ejecuta
 

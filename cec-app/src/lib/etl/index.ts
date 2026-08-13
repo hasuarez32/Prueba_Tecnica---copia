@@ -22,6 +22,9 @@ export interface ArchivoEntrada {
   datos: ArrayBuffer | Uint8Array
 }
 
+/** Extensiones que cuentan como evidencia fotográfica. */
+const RE_IMAGEN = /\.(jpe?g|png|heic|heif|webp|gif|bmp|tiff?)$/i
+
 function fechaCorta(iso: string): string {
   const [, m, d] = iso.split('-')
   return `${d}/${MESES_CORTO[Number(m)]}`
@@ -53,8 +56,15 @@ export function importarArchivos(
   let cronograma: { libro: XLSX.WorkBook; archivo: string } | null = null
   let listado: { libro: XLSX.WorkBook; archivo: string } | null = null
   const sinClasificar: string[] = []
+  let evidencias = 0
 
   for (const f of archivos) {
+    // Si arrastran la carpeta entera vienen también las fotos: no son un error,
+    // son la evidencia fotográfica del programa.
+    if (RE_IMAGEN.test(f.nombre)) {
+      evidencias++
+      continue
+    }
     if (!/\.xlsx?$/i.test(f.nombre) && !/\.xlsm$/i.test(f.nombre)) {
       incidencias.push({
         severidad: 'error',
@@ -112,7 +122,7 @@ export function importarArchivos(
       .replace(/[_]+/g, ' ')
       .trim()
 
-  const entrada: EntradaCurso = { nombre, cronograma, listado }
+  const entrada: EntradaCurso = { nombre, cronograma, listado, evidencias }
   const { curso, incidencias: incBuild } = construirCurso(entrada)
   const todas = [...incidencias, ...incBuild]
   const hayErrores = todas.some((i) => i.severidad === 'error')

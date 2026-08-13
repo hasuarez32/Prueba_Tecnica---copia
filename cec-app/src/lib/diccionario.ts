@@ -532,6 +532,7 @@ export const TABLAS: TablaDoc[] = [
       { campo: 'pct_cumplimiento_tabulacion', tipo: 'número 0–1', descripcion: 'Proporción de sesiones dictadas que ya están tabuladas.', origen: 'tabuladas ÷ realizadas.', ejemplo: '0,857', nota: 'Vacío si el programa aún no ha dictado ninguna sesión.' },
       { campo: 'estado_programa', tipo: 'Por iniciar | En ejecución | Finalizado', descripcion: 'Dónde está el programa respecto a la fecha de corte.', origen: 'Derivado comparando el corte con fecha_inicio y fecha_fin.', ejemplo: 'En ejecución' },
       { campo: 'n_en_riesgo', tipo: 'entero', descripcion: 'Participantes del programa que superaron el tope de fallas.', origen: 'Conteo.', ejemplo: '2' },
+      { campo: 'n_evidencias', tipo: 'entero', descripcion: 'Archivos de evidencia fotográfica cargados para el programa.', origen: 'Conteo de imágenes en «Equipo Logístico/Evidencia Fotográfica».', ejemplo: '12', nota: 'Es el tercer proceso que controla el equipo logístico, junto al cronograma y los listados. Se cuenta por programa y no por sesión porque los nombres de archivo no dicen a qué clase pertenece cada foto.' },
       { campo: 'origen', tipo: 'texto', descripcion: 'Archivos de los que se importó el curso.', origen: 'Nombres de los Excel cargados.', ejemplo: 'Cronograma_Ecografía.xlsx + GUECFT061_….xlsx', nota: 'Trazabilidad: permite saber de qué archivo salió cada curso.' },
     ],
   },

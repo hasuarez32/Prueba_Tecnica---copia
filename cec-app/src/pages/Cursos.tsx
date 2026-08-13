@@ -237,55 +237,91 @@ export function Cursos() {
             {derivada.programas.length === 0 ? (
               <p className="card-hint">Todavía no hay cursos en esta base.</p>
             ) : (
-              <ul className="list-none p-0 m-0">
-                {derivada.programas.map((p) => (
-                  <li
-                    key={p.programa_id}
-                    className="flex items-center gap-3 py-3 border-b border-line last:border-b-0"
-                  >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{
-                        background: p.n_sesiones_pendientes > 0 ? 'var(--pink)' : 'var(--cyan)',
-                      }}
-                      aria-hidden
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-medium text-sm text-heading truncate">
-                        {p.programa}
-                      </span>
-                      <span className="block text-[11.5px] text-muted truncate">
-                        {p.nombre_oficial || p.origen || '—'}
-                      </span>
-                    </span>
-                    <span className="font-mono text-[11.5px] text-muted whitespace-nowrap">
-                      {p.n_sesiones} ses ·{' '}
-                      {p.n_sesiones_pendientes > 0
-                        ? `${p.n_sesiones_pendientes} pend`
-                        : 'al día'}
-                    </span>
-                    <button
-                      className="btn btn-outline px-2.5 py-1 text-[12px]"
-                      onClick={() => {
-                        if (confirm(`¿Quitar «${p.programa}» de la base? Podrás volver a subir sus Excel cuando quieras.`)) {
-                          void eliminarCurso(p.programa_id)
-                        }
-                      }}
-                      aria-label={`Quitar ${p.programa}`}
-                      title="Quitar de la base"
-                    >
-                      ×
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <div className="scroll-x">
+                <table>
+                  <caption className="sr-only">
+                    Cursos cargados, con su estado de tabulación y de evidencia fotográfica
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" className="th">Programa</th>
+                      <th scope="col" className="th text-center">Ses.</th>
+                      <th scope="col" className="th">Tabulación</th>
+                      <th scope="col" className="th">Evidencia</th>
+                      <th scope="col" className="th"><span className="sr-only">Quitar</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {derivada.programas.map((p) => (
+                      <tr key={p.programa_id}>
+                        <td className="td">
+                          <span className="flex items-center gap-2.5">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{
+                                background: p.n_sesiones_pendientes > 0 ? 'var(--pink)' : 'var(--cyan)',
+                              }}
+                              aria-hidden
+                            />
+                            <span className="min-w-0">
+                              <span className="block font-medium text-heading truncate max-w-[190px]">
+                                {p.programa}
+                              </span>
+                              <span className="block text-[11.5px] text-muted truncate max-w-[190px]">
+                                {p.nombre_oficial || p.origen || '—'}
+                              </span>
+                            </span>
+                          </span>
+                        </td>
+                        <td className="td text-center font-mono text-[12.5px]">{p.n_sesiones}</td>
+                        <td className="td whitespace-nowrap">
+                          {p.n_sesiones_pendientes > 0 ? (
+                            <span className="pill pill-pend">{p.n_sesiones_pendientes} pend</span>
+                          ) : (
+                            <span className="pill pill-tab">al día</span>
+                          )}
+                        </td>
+                        <td className="td whitespace-nowrap">
+                          {p.n_evidencias > 0 ? (
+                            <span className="pill pill-tab">
+                              {p.n_evidencias} archivo{p.n_evidencias === 1 ? '' : 's'}
+                            </span>
+                          ) : (
+                            <span className="pill pill-fut">sin cargar</span>
+                          )}
+                        </td>
+                        <td className="td text-right">
+                          <button
+                            className="btn btn-outline px-2.5 py-1 text-[12px]"
+                            onClick={() => {
+                              if (confirm(`¿Quitar «${p.programa}» de la base? Podrás volver a subir sus Excel cuando quieras.`)) {
+                                void eliminarCurso(p.programa_id)
+                              }
+                            }}
+                            aria-label={`Quitar ${p.programa}`}
+                            title="Quitar de la base"
+                          >
+                            ×
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
+            <p className="card-hint mt-3">
+              La evidencia fotográfica se cuenta por programa: los nombres de archivo no
+              permiten saber a qué sesión corresponde cada foto. Al arrastrar la carpeta
+              completa, las imágenes se cuentan solas.
+            </p>
           </Card>
 
           <Card titulo="Base de datos" hint="Todo se guarda en este navegador (IndexedDB)">
             <p className="text-[13px] text-body">
               {derivada.programas.length} cursos · {numero(derivada.totales.n_sesiones)} sesiones ·{' '}
-              {numero(derivada.totales.n_participantes)} participantes.
+              {numero(derivada.totales.n_participantes)} participantes ·{' '}
+              {numero(derivada.programas.reduce((a, p) => a + p.n_evidencias, 0))} evidencias.
             </p>
             <p className="card-hint mt-1">
               Última actualización: {fechaLarga(base.generado_en.slice(0, 10))}

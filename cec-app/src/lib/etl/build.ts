@@ -26,6 +26,8 @@ import {
 export interface EntradaCurso {
   /** Nombre sugerido del programa (carpeta o archivo). */
   nombre: string
+  /** Archivos de evidencia fotográfica hallados junto a los Excel. */
+  evidencias?: number
   cronograma: { libro: XLSX.WorkBook; archivo: string } | null
   listado: { libro: XLSX.WorkBook; archivo: string } | null
 }
@@ -451,6 +453,7 @@ export function construirCurso(entrada: EntradaCurso): {
     horas_totales: cons.horas_totales,
     horas_falla_max: cons.horas_falla_max,
     origen: [entrada.cronograma?.archivo, entrada.listado?.archivo].filter(Boolean).join(' + '),
+    n_evidencias: entrada.evidencias ?? 0,
   }
 
   return {

@@ -48,8 +48,9 @@ console.log(`Programas detectados: ${encontradas.length}\n`)
 const cursos: CursoImportado[] = []
 let errores = 0
 
-for (const { nombre, dir, relativa } of encontradas) {
+for (const { nombre, dir, relativa, evidencias } of encontradas) {
   const r = importarArchivos(archivosDe(dir), nombre)
+  if (r.curso) r.curso.programa.n_evidencias = evidencias
   const nErr = r.incidencias.filter((i) => i.severidad === 'error').length
   const nAvi = r.incidencias.filter((i) => i.severidad === 'aviso').length
   if (r.curso) {
@@ -57,7 +58,8 @@ for (const { nombre, dir, relativa } of encontradas) {
     console.log(
       `  [OK]    ${r.curso.programa.programa.padEnd(24)} ` +
       `${String(r.curso.sesiones.length).padStart(3)} sesiones, ` +
-      `${String(r.curso.participantes.length).padStart(3)} participantes, ${nAvi} avisos`,
+      `${String(r.curso.participantes.length).padStart(3)} participantes, ` +
+      `${String(evidencias).padStart(2)} evidencias, ${nAvi} avisos`,
     )
   } else {
     errores++

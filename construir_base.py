@@ -43,6 +43,7 @@ SUBRUTA_CLASES = ("Equipo Logístico", "Listado de Clases")
 SUBRUTA_CLASES_ALT = ("Equipo Logistico", "Listado de Clases")  # tolerancia sin tilde
 
 EXT_IGNORADAS = (".jpg", ".jpeg", ".heic", ".png", ".docx", ".pdf")
+EXT_IMAGEN = (".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp", ".gif", ".bmp", ".tif", ".tiff")
 CARPETAS_IGNORADAS = {"evidencia fotografica", "evidencia fotográfica"}
 
 ANIO_POR_DEFECTO = 2026  # §4.2: el año con el que se reconstruyen los "DD T" / "DD M"
@@ -341,6 +342,27 @@ def descubrir_programas(raiz: str, profundidad_max: int = 5):
     recorrer(raiz, 0)
     encontrados.sort(key=lambda x: (norm(x[0]), x[1]))
     return encontrados
+
+
+def contar_evidencias(carpeta_clases: str) -> int:
+    """
+    Fotos en 'Equipo Logístico/Evidencia Fotográfica'. Es el tercer proceso que
+    controla el equipo logístico, junto al cronograma y los listados. Se cuenta
+    por programa: los nombres de archivo no dicen a qué sesión pertenece cada foto.
+    """
+    equipo = os.path.dirname(carpeta_clases)
+    total = 0
+    try:
+        for nombre in os.listdir(equipo):
+            ruta = os.path.join(equipo, nombre)
+            if not os.path.isdir(ruta) or not norm(nombre).startswith("evidencia"):
+                continue
+            for f in os.listdir(ruta):
+                if f.lower().endswith(EXT_IMAGEN):
+                    total += 1
+    except OSError:
+        return 0
+    return total
 
 
 def localizar_archivos(carpeta_clases: str):
@@ -761,6 +783,7 @@ def emparejar(sesion, columnas_por_fecha):
 def procesar_programa(carpeta, ruta_clases, fecha_corte):
     programa_id, programa = identificar_programa(carpeta)
     ruta_cron, ruta_lst = localizar_archivos(ruta_clases)
+    n_evidencias = contar_evidencias(ruta_clases)
 
     if ruta_cron is None:
         INC.add(programa, "No se encontró archivo 'Cronograma_*.xlsx'.", "ERROR")
@@ -1094,6 +1117,10 @@ def procesar_programa(carpeta, ruta_clases, fecha_corte):
         INC.add(programa, "Suma de intensidad horaria del cronograma (%g h) ≠ NÚMERO "
                           "DE HORAS del CONSOLIDADO (%g h)." % (suma_int, horas_totales))
 
+    if n_evidencias == 0 and n_realizadas > 0:
+        INC.add(programa, "Sin evidencia fotográfica pese a tener %d sesión(es) ya "
+                          "dictada(s)." % n_realizadas)
+
     for reg in filas_asistencia:
         reg.pop("_col", None)
 
@@ -1104,6 +1131,7 @@ def procesar_programa(carpeta, ruta_clases, fecha_corte):
         "asistencia": filas_asistencia,
         "participantes": filas_participantes,
         "programa_row": fila_programa,
+        "n_evidencias": n_evidencias,
         "n_futuras": sum(1 for f in filas_sesiones
                          if f["estado_seguimiento"] == "Futura no exigible"),
     }
@@ -1259,21 +1287,22 @@ def escribir_readme(ruta, resultados, fecha_corte, salida, orden_programas):
         "## Resumen por programa",
         "",
         "| Programa | Sesiones | Tabuladas | Pendientes | Futuras | Cumplim. | "
-        "Participantes | Incidencias |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|",
+        "Participantes | Evidencias | Incidencias |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for nombre in orden_programas:
         r = resultados.get(nombre)
         if not r:
-            lineas.append("| %s | — | — | — | — | — | — | ver abajo |" % nombre)
+            lineas.append("| %s | — | — | — | — | — | — | — | ver abajo |" % nombre)
             continue
         p = r["programa_row"]
         pct = "—" if p["pct_cumplimiento_tabulacion"] is None else \
             "%.0f%%" % (100 * p["pct_cumplimiento_tabulacion"])
-        lineas.append("| %s | %d | %d | %d | %d | %s | %d | %d |" % (
+        lineas.append("| %s | %d | %d | %d | %d | %s | %d | %d | %d |" % (
             r["programa"], p["n_sesiones"], p["n_sesiones_tabuladas"],
             p["n_sesiones_pendientes"], r["n_futuras"], pct,
-            len(r["participantes"]), len(INC.por_programa(r["programa"]))))
+            len(r["participantes"]), r["n_evidencias"],
+            len(INC.por_programa(r["programa"]))))
 
     lineas += ["", "## Incidencias detectadas", ""]
     programas_con_inc = []

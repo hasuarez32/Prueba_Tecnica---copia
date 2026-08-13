@@ -21,6 +21,27 @@ export interface CarpetaPrograma {
   dir: string
   /** Ruta relativa desde la raíz, útil para el log (incluye el mes si existe). */
   relativa: string
+  /** Archivos de la carpeta «Evidencia Fotográfica» hermana, si existe. */
+  evidencias: number
+}
+
+const RE_IMAGEN = /\.(jpe?g|png|heic|heif|webp|gif|bmp|tiff?)$/i
+
+/** Cuenta las fotos de «Equipo Logístico/Evidencia Fotográfica». */
+function contarEvidencias(dirClases: string): number {
+  const equipo = path.dirname(dirClases)
+  let total = 0
+  try {
+    for (const e of fs.readdirSync(equipo, { withFileTypes: true })) {
+      if (!e.isDirectory() || !norm(e.name).startsWith('evidencia')) continue
+      for (const f of fs.readdirSync(path.join(equipo, e.name))) {
+        if (RE_IMAGEN.test(f)) total++
+      }
+    }
+  } catch {
+    return 0 // sin carpeta de evidencias o sin permisos
+  }
+  return total
 }
 
 const PROFUNDIDAD_MAXIMA = 5
@@ -60,6 +81,7 @@ export function descubrirProgramas(raiz: string): CarpetaPrograma[] {
           nombre: programa,
           dir: completa,
           relativa: path.relative(raiz, completa),
+          evidencias: contarEvidencias(completa),
         })
         continue // no hace falta bajar más por esta rama
       }

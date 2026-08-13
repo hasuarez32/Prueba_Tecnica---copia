@@ -57,7 +57,7 @@ const HOJAS: Record<string, string[]> = {
     'coordinador', 'experto_facilitador', 'entidad_convenio', 'modalidad', 'valor_programa',
     'n_participantes', 'fecha_inicio', 'fecha_fin', 'n_sesiones', 'horas_totales',
     'horas_falla_max', 'n_sesiones_realizadas', 'n_sesiones_tabuladas', 'n_sesiones_pendientes',
-    'pct_cumplimiento_tabulacion', 'estado_programa',
+    'pct_cumplimiento_tabulacion', 'estado_programa', 'n_evidencias',
   ],
   dim_calendario: [
     'fecha', 'anio', 'mes', 'mes_nombre', 'dia', 'dia_semana', 'dia_semana_num', 'semana_iso',
